@@ -97,7 +97,7 @@ function notes.follow_wikilink()
 	local target = cwd .. "/" .. link_text .. ".md"
 
 	if vim.fn.filereadable(target) == 0 then
-		local ok = pcall(vim.fn.writefile, {}, target)
+		local ok = pcall(vim.fn.writefile, { "# " .. link_text }, target)
 		if not ok then
 			vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
 			return false

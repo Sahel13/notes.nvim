@@ -54,7 +54,7 @@
             "Place the cursor inside \"[[does_not_exist]]\" and press Enter in normal mode",
             "Verify a new file named \"does_not_exist.md\" is created in :pwd",
             "Verify the newly created \"does_not_exist.md\" is opened in the current window (using :edit)",
-            "Verify the created file is not automatically populated with any additional template content (empty file is acceptable)",
+            "Verify the created file contains only the seeded header (if configured) and no extra template content",
             "Return to the previous note using the plugin back navigation and follow \"[[does_not_exist]]\" again",
             "Verify the existing \"does_not_exist.md\" file is opened and is not truncated or overwritten"
         ],
@@ -116,7 +116,7 @@
             "Verify the first line of the new file is a level-one Markdown header that matches the filename stem (\"# new_note\")",
             "Verify the header is only added when the file is created; subsequent opens do not duplicate or alter the header"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",

@@ -4,6 +4,23 @@ local notes = {}
 local ok_types, blink_types = pcall(require, "blink.cmp.types")
 local completion_kinds = ok_types and blink_types.CompletionItemKind or vim.lsp.protocol.CompletionItemKind
 local nav_stack = {}
+local config = {
+  mappings = {
+    follow = "<CR>",
+    back = "<BS>",
+    backlinks = "<leader>nb",
+  },
+}
+
+-- Configure notes.nvim behavior (mappings can be overridden or disabled).
+function notes.setup(opts)
+  config = vim.tbl_deep_extend("force", config, opts or {})
+end
+
+-- Return the current configuration.
+function notes.get_config()
+  return config
+end
 
 -- Return sorted note name stems for Markdown files in cwd.
 local function list_note_stems(cwd)
@@ -242,6 +259,88 @@ function notes.go_back()
   end
 
   vim.cmd("edit " .. vim.fn.fnameescape(previous))
+  return true
+end
+
+-- Apply configured key mappings to a buffer.
+function notes.apply_mappings(buf)
+  local target_buf = buf or 0
+  local mappings = config.mappings or {}
+
+  if mappings.follow then
+    local follow_map = mappings.follow
+    vim.keymap.set("n", follow_map, function()
+      if not notes.follow_wikilink() then
+        local keys = vim.api.nvim_replace_termcodes(follow_map, true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
+      end
+    end, { buffer = target_buf, silent = true, desc = "Follow wiki-link" })
+  end
+
+  if mappings.back then
+    local back_map = mappings.back
+    vim.keymap.set("n", back_map, function()
+      if not notes.go_back() then
+        local keys = vim.api.nvim_replace_termcodes(back_map, true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
+      end
+    end, { buffer = target_buf, silent = true, desc = "Notes back" })
+  end
+
+  if mappings.backlinks then
+    vim.keymap.set("n", mappings.backlinks, function()
+      notes.find_backlinks()
+    end, { buffer = target_buf, silent = true, desc = "Notes backlinks" })
+  end
+end
+
+-- Find backlinks to the current note and populate the quickfix list.
+function notes.find_backlinks()
+  local bufname = vim.api.nvim_buf_get_name(0)
+  if bufname == "" then
+    vim.notify("notes.nvim: current buffer has no filename", vim.log.levels.WARN)
+    return false
+  end
+
+  local stem = vim.fn.fnamemodify(bufname, ":t:r")
+  if stem == "" then
+    vim.notify("notes.nvim: unable to determine note name", vim.log.levels.WARN)
+    return false
+  end
+
+  if vim.fn.executable("rg") == 0 then
+    vim.notify("notes.nvim: ripgrep (rg) is required for backlinks", vim.log.levels.ERROR)
+    return false
+  end
+
+  local cwd = vim.fn.getcwd()
+  local pattern = "[[" .. stem .. "]]"
+  local cmd = { "rg", "--vimgrep", "--fixed-strings", "--glob", "*.md", pattern, cwd }
+  local output = vim.fn.systemlist(cmd)
+  local exit_code = vim.v.shell_error
+  if exit_code > 1 then
+    vim.notify("notes.nvim: ripgrep failed while searching backlinks", vim.log.levels.ERROR)
+    return false
+  end
+
+  local items = {}
+  for _, line in ipairs(output) do
+    local filename, lnum, col, text = line:match("^(.-):(%d+):(%d+):(.*)$")
+    if filename then
+      table.insert(items, {
+        filename = filename,
+        lnum = tonumber(lnum),
+        col = tonumber(col),
+        text = text,
+      })
+    end
+  end
+
+  vim.fn.setqflist({}, "r", {
+    title = "Backlinks: " .. stem,
+    items = items,
+  })
+  vim.cmd("copen")
   return true
 end
 

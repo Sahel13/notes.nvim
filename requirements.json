@@ -90,7 +90,7 @@
             "Verify the quickfix list is replaced with these backlink results and :copen displays them",
             "Select a quickfix entry and verify it opens the referring note at the matching location"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",
@@ -102,7 +102,7 @@
             "Verify a clear error is shown to the user indicating ripgrep is required for backlinks",
             "Verify the quickfix list is not replaced with invalid/empty data due to the failure"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",

@@ -12,6 +12,9 @@
 - Added tests for wiki-link following and missing-note creation.
 - Added navigation stack for wiki-link jumps and Backspace to return to prior notes.
 - Added Plenary test covering wiki-link navigation history and backtracking.
+- Added backlinks search using ripgrep with quickfix population and graceful failure handling.
+- Added Plenary tests for backlinks population and ripgrep-missing behavior.
+- Added configurable key mappings via notes.setup, including backlinks mapping override.
 
 ## Tests run
 - `scripts/test.sh`

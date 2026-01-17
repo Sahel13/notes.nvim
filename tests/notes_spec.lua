@@ -28,6 +28,16 @@ local function with_markdown_buf(fn)
   end
 end
 
+local function with_stubbed(target, key, value, fn)
+  local original = target[key]
+  target[key] = value
+  local ok, err = pcall(fn)
+  target[key] = original
+  if not ok then
+    error(err)
+  end
+end
+
 describe("notes.nvim", function()
   it("loads the module", function()
     local notes = require("notes")
@@ -168,5 +178,128 @@ describe("notes.nvim", function()
 
       assert.is_false(notes.go_back())
     end)
+  end)
+
+  it("finds backlinks with ripgrep and populates quickfix list", function()
+    local notes = require("notes")
+    if vim.fn.executable("rg") == 0 then
+      return
+    end
+
+    with_temp_dir({
+      { name = "target.md", lines = { "# target" } },
+      { name = "alpha.md", lines = { "# alpha", "See [[target]] here" } },
+      { name = "beta.md", lines = { "[[target]]" } },
+    }, function(tmp_dir)
+      vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/target.md"))
+      vim.bo.filetype = "markdown"
+
+      local handled = notes.find_backlinks()
+      assert.is_true(handled)
+
+      local qf = vim.fn.getqflist({ title = 1, items = 1 })
+      assert.equals("Backlinks: target", qf.title)
+      assert.equals(2, #qf.items)
+
+      local filenames = {}
+      for _, item in ipairs(qf.items) do
+        local name = item.filename
+        if name == nil or name == "" then
+          name = vim.fn.bufname(item.bufnr)
+        end
+        if name ~= nil and name ~= "" then
+          filenames[vim.fn.fnamemodify(name, ":t")] = item
+        end
+      end
+
+      assert.is_table(filenames["alpha.md"])
+      assert.is_table(filenames["beta.md"])
+      assert.equals(2, filenames["alpha.md"].lnum)
+      assert.equals(5, filenames["alpha.md"].col)
+
+      if vim.api.nvim_buf_is_valid(0) then
+        vim.api.nvim_buf_delete(0, { force = true })
+      end
+    end)
+  end)
+
+  it("fails gracefully when ripgrep is unavailable", function()
+    local notes = require("notes")
+    with_temp_dir({
+      { name = "target.md", lines = { "# target" } },
+    }, function(tmp_dir)
+      vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/target.md"))
+      vim.bo.filetype = "markdown"
+
+      vim.fn.setqflist({}, "r", {
+        title = "Existing",
+        items = {
+          { filename = tmp_dir .. "/alpha.md", lnum = 1, col = 1, text = "dummy" },
+        },
+      })
+
+      local notices = {}
+      with_stubbed(vim.fn, "executable", function()
+        return 0
+      end, function()
+        with_stubbed(vim, "notify", function(msg, level)
+          table.insert(notices, { msg = msg, level = level })
+        end, function()
+          local handled = notes.find_backlinks()
+          assert.is_false(handled)
+        end)
+      end)
+
+      assert.is_true(#notices > 0)
+      local qf = vim.fn.getqflist({ title = 1, items = 1 })
+      assert.equals("Existing", qf.title)
+      assert.equals(1, #qf.items)
+
+      if vim.api.nvim_buf_is_valid(0) then
+        vim.api.nvim_buf_delete(0, { force = true })
+      end
+    end)
+  end)
+
+  it("allows mapping overrides via setup", function()
+    local notes = require("notes")
+    notes.setup({
+      mappings = {
+        follow = "gF",
+        back = "gB",
+        backlinks = false,
+      },
+    })
+
+    with_markdown_buf(function(buf)
+      vim.api.nvim_set_current_buf(buf)
+      local calls = {}
+      with_stubbed(vim.keymap, "set", function(mode, lhs, _, opts)
+        table.insert(calls, { mode = mode, lhs = lhs, desc = opts and opts.desc or "" })
+      end, function()
+        notes.apply_mappings(buf)
+      end)
+
+      local function has_mapping(desc, lhs)
+        for _, call in ipairs(calls) do
+          if call.desc == desc and call.lhs == lhs then
+            return true
+          end
+        end
+        return false
+      end
+
+      assert.is_true(has_mapping("Follow wiki-link", "gF"))
+      assert.is_true(has_mapping("Notes back", "gB"))
+      assert.is_false(has_mapping("Notes backlinks", "<leader>nb"))
+    end)
+
+    notes.setup({
+      mappings = {
+        follow = "<CR>",
+        back = "<BS>",
+        backlinks = "<leader>nb",
+      },
+    })
   end)
 end)

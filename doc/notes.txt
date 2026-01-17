@@ -1,0 +1,247 @@
+*notes.nvim* *notes.txt* Simple note-taking plugin for Neovim
+
+==============================================================================
+CONTENTS                                                      *notes-contents*
+
+    1. Introduction ............................ |notes-introduction|
+    2. Requirements ............................ |notes-requirements|
+    3. Installation ............................ |notes-installation|
+    4. Configuration ........................... |notes-config|
+    5. Features ................................ |notes-features|
+    6. Functions ............................... |notes-functions|
+    7. Examples ................................ |notes-examples|
+    8. About ................................... |notes-about|
+
+==============================================================================
+INTRODUCTION                                              *notes-introduction*
+
+notes.nvim is a lightweight note-taking plugin inspired by Zettelkasten,
+providing core vimwiki-style features for Neovim.
+
+Features:
+  - Wiki-link completion via blink.cmp
+  - Follow [[links]] to open or create notes
+  - Back navigation after following links
+  - Navigate between wiki-links with Tab/Shift-Tab
+  - Find backlinks using ripgrep
+  - Daily notes with date-based filenames
+
+Notes are stored as Markdown files in your current working directory (`:pwd`).
+The plugin works with flat directory structures only.
+
+==============================================================================
+REQUIREMENTS                                              *notes-requirements*
+
+  - Neovim 0.10+
+  - blink.cmp (https://github.com/Saghen/blink.cmp)
+  - ripgrep (for backlinks feature)
+
+==============================================================================
+INSTALLATION                                              *notes-installation*
+
+Using lazy.nvim: >lua
+
+  {
+    "Sahel13/notes.nvim",
+    ft = "markdown",
+    opts = {},
+  }
+<
+
+Register the blink.cmp source in your blink.cmp configuration: >lua
+
+  {
+    "saghen/blink.cmp",
+    opts = {
+      sources = {
+        default = { "lsp", "path", "snippets", "buffer", "notes" },
+        providers = {
+          notes = {
+            name = "notes",
+            module = "notes",
+          },
+        },
+      },
+    },
+  }
+<
+
+==============================================================================
+CONFIGURATION                                     *notes-config* *notes-setup*
+
+Call `setup()` to configure the plugin: >lua
+
+  require("notes").setup({
+    mappings = {
+      follow = "<CR>",           -- Follow wiki-link under cursor
+      back = "<BS>",             -- Navigate back in link history
+      next_wikilink = "<Tab>",   -- Jump to next wiki-link
+      prev_wikilink = "<S-Tab>", -- Jump to previous wiki-link
+      backlinks = "<leader>nb",  -- Find backlinks to current note
+      daily_note = "<leader>nd", -- Open today's daily note
+    },
+  })
+<
+
+Mappings are buffer-local and only apply to Markdown files. Set any mapping
+to `false` to disable it: >lua
+
+  require("notes").setup({
+    mappings = {
+      follow = false,  -- Disable follow mapping
+    },
+  })
+<
+
+==============================================================================
+FEATURES                                                      *notes-features*
+
+------------------------------------------------------------------------------
+WIKI-LINK COMPLETION                                        *notes-completion*
+
+Type `[[` in a Markdown file to trigger completion of existing note names.
+Completions are provided by blink.cmp and scan all `.md` files in `:pwd`.
+
+The completion automatically adds the closing `]]` when needed.
+
+------------------------------------------------------------------------------
+FOLLOWING LINKS                                                 *notes-follow*
+
+Press `<CR>` (or your configured mapping) on a `[[wiki-link]]` to open the
+target note. If the note doesn't exist, it will be created with a title
+heading.
+
+New notes are created in `:pwd` with the `.md` extension.
+
+------------------------------------------------------------------------------
+BACK NAVIGATION                                                   *notes-back*
+
+After following wiki-links, press `<BS>` (or your configured mapping) to
+navigate back through your link history.
+
+The navigation stack is maintained per Neovim session.
+
+------------------------------------------------------------------------------
+WIKILINK NAVIGATION                                          *notes-navigation*
+
+Jump between wiki-links in the current buffer:
+  - `<Tab>` - Jump to next wiki-link
+  - `<S-Tab>` - Jump to previous wiki-link
+
+Searches wrap around if no link is found in the search direction.
+
+------------------------------------------------------------------------------
+BACKLINKS                                                     *notes-backlinks*
+
+Press `<leader>nb` (or your configured mapping) to find all notes that link
+to the current note. Results are shown in the quickfix list.
+
+Requires `ripgrep` to be installed and available in your PATH.
+
+------------------------------------------------------------------------------
+DAILY NOTES                                                       *notes-daily*
+
+Press `<leader>nd` (or your configured mapping) to open or create today's
+daily note. The file is named `YYYY-MM-DD.md` and created in `:pwd` with a
+formatted title heading (e.g., "# Monday, January 17, 2026").
+
+==============================================================================
+FUNCTIONS                                                     *notes-functions*
+
+notes.setup({opts})                                             *notes.setup()*
+    Configure the plugin. See |notes-config| for options.
+
+    Parameters: ~
+        {opts} (table|nil) Configuration options
+
+notes.follow_wikilink()                                  *notes.follow_wikilink()*
+    Follow the wiki-link under the cursor. Creates the target note if it
+    doesn't exist. Returns `true` if a link was followed, `false` otherwise.
+
+notes.go_back()                                                *notes.go_back()*
+    Navigate back to the previous note in the navigation stack.
+    Returns `true` if navigation occurred, `false` if stack is empty.
+
+notes.find_backlinks()                                    *notes.find_backlinks()*
+    Find all notes that link to the current note and populate the quickfix
+    list. Requires ripgrep. Returns `true` on success, `false` on error.
+
+notes.open_daily_note()                                  *notes.open_daily_note()*
+    Open or create today's daily note with filename format `YYYY-MM-DD.md`.
+    Returns `true` on success, `false` on error.
+
+notes.jump_to_next_wikilink()                      *notes.jump_to_next_wikilink()*
+    Jump cursor to the next wiki-link in the buffer.
+    Returns `true` if a link was found, `false` otherwise.
+
+notes.jump_to_prev_wikilink()                      *notes.jump_to_prev_wikilink()*
+    Jump cursor to the previous wiki-link in the buffer.
+    Returns `true` if a link was found, `false` otherwise.
+
+notes.apply_mappings({buf})                              *notes.apply_mappings()*
+    Apply configured key mappings to a buffer. Called automatically for
+    Markdown files, but can be invoked manually if needed.
+
+    Parameters: ~
+        {buf} (number|nil) Buffer number (defaults to current buffer)
+
+==============================================================================
+EXAMPLES                                                      *notes-examples*
+
+Basic workflow: >
+
+  1. Open Neovim in your notes directory
+  2. Create a new note: :e index.md
+  3. Type [[another-note]] and press <CR> to create and open it
+  4. Add content, then press <BS> to go back
+  5. Type [[ to see completions of existing notes
+<
+
+Using daily notes: >
+
+  1. Press <leader>nd to open today's note
+  2. Add your daily log entries
+  3. Link to other notes: [[project-x]]
+  4. Press <leader>nb to see which notes link back to today
+<
+
+Custom configuration: >lua
+
+  require("notes").setup({
+    mappings = {
+      follow = "<leader><CR>",    -- Use leader+Enter instead
+      back = "<leader>bp",        -- Custom back mapping
+      next_wikilink = "]w",       -- Vim-style next
+      prev_wikilink = "[w",       -- Vim-style previous
+      backlinks = "<leader>bl",   -- Custom backlinks
+      daily_note = "<leader>td",  -- Custom daily note
+    },
+  })
+<
+
+Disable unwanted mappings: >lua
+
+  require("notes").setup({
+    mappings = {
+      next_wikilink = false,  -- Don't map Tab
+      prev_wikilink = false,  -- Don't map Shift-Tab
+    },
+  })
+<
+
+Call functions directly: >vim
+
+  :lua require("notes").find_backlinks()
+  :lua require("notes").open_daily_note()
+<
+
+==============================================================================
+ABOUT                                                            *notes-about*
+
+License: MIT
+
+Repository: https://github.com/Sahel13/notes.nvim
+
+Inspired by vimwiki (https://github.com/vimwiki/vimwiki)
+
+vim:tw=78:ts=8:ft=help:norl:

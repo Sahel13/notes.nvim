@@ -30,6 +30,25 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 }
 ```
 
+Register the source in your `blink.cmp` configuration:
+
+```lua
+{
+    "saghen/blink.cmp",
+    opts = {
+        sources = {
+            default = { "lsp", "path", "snippets", "buffer", "notes" },
+            providers = {
+                notes = {
+                    name = "notes",
+                    module = "notes",
+                },
+            },
+        },
+    },
+}
+```
+
 ## Configuration
 
 ```lua

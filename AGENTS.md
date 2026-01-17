@@ -15,6 +15,7 @@ This plugin has no build step.
 - Follow existing Lua style in `lua/notes.lua` and keep formatting minimal and readable.
 - Prefer 2-space indentation for new Lua blocks to stay compact.
 - Use descriptive, lowercase-with-underscores for Lua locals and functions (e.g., `find_backlinks`).
+- Add brief doc comments for new functions that describe what they do (not how).
 
 ## Testing Guidelines
 - Automated tests live in `tests/` and run via Plenary/Busted in headless Neovim.
@@ -23,7 +24,8 @@ This plugin has no build step.
 
 ## Commit & Pull Request Guidelines
 - This repository has no commit history yet, so no established convention exists.
-- Use short, imperative commit subjects (e.g., “Add wiki-link completion”).
+- Use concise, informative commit titles (short, imperative).
+- Include a descriptive commit body explaining what features were implemented and how.
 - For PRs, include a brief summary, any updated `requirements.json` steps, and a note on how you manually verified changes.
 
 ## Agent-Specific Notes

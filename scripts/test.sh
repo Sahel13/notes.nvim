@@ -11,6 +11,7 @@ fi
 PLENARY_PATH="${PLENARY_PATH:-}"
 if [ -z "$PLENARY_PATH" ]; then
   for p in \
+    "$HOME/.local/share/nvim/lazy/plenary.nvim" \
     "$HOME/.local/share/nvim/site/pack/packer/start/plenary.nvim" \
     "$HOME/.local/share/nvim/site/pack/packer/opt/plenary.nvim" \
     "$HOME/.local/share/nvim/site/pack/lazy/start/plenary.nvim" \

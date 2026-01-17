@@ -18,6 +18,19 @@
     },
     {
         "category": "functional",
+        "description": "Accepting a wiki-link completion inserts the closing brackets when they are not yet typed",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Open any Markdown buffer in that Neovim instance and enter insert mode",
+            "Type \"[[\" and start typing a partial note name without typing any closing brackets",
+            "Accept a completion suggestion from blink.cmp",
+            "Verify the resulting text is a full wiki-link with closing brackets (e.g., \"[[alpha]]\") without requiring manual \"\"]]\" insertion",
+            "Verify the completion inserts only the note name as the link text (no \".md\")"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
         "description": "Follow a wiki-link under the cursor by pressing Enter in normal mode, opening the linked Markdown file from :pwd",
         "steps": [
             "Open Neovim with :pwd set to the notes directory",

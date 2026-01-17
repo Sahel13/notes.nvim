@@ -131,4 +131,42 @@ describe("notes.nvim", function()
       end)
     end)
   end)
+
+  it("tracks navigation history for wiki-link jumps", function()
+    local notes = require("notes")
+    with_temp_dir({
+      { name = "A.md", lines = { "# A", "[[B]]", "[[C]]" } },
+      { name = "B.md", lines = { "# B" } },
+      { name = "C.md", lines = { "# C", "[[D]]" } },
+      { name = "D.md", lines = { "# D" } },
+    }, function(tmp_dir)
+      vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/A.md"))
+      vim.bo.filetype = "markdown"
+
+      vim.api.nvim_win_set_cursor(0, { 2, 2 })
+      assert.is_true(notes.follow_wikilink())
+      assert.equals("B.md", vim.fn.expand("%:t"))
+
+      assert.is_true(notes.go_back())
+      assert.equals("A.md", vim.fn.expand("%:t"))
+      vim.bo.filetype = "markdown"
+
+      vim.api.nvim_win_set_cursor(0, { 3, 2 })
+      assert.is_true(notes.follow_wikilink())
+      assert.equals("C.md", vim.fn.expand("%:t"))
+      vim.bo.filetype = "markdown"
+
+      vim.api.nvim_win_set_cursor(0, { 2, 2 })
+      assert.is_true(notes.follow_wikilink())
+      assert.equals("D.md", vim.fn.expand("%:t"))
+
+      assert.is_true(notes.go_back())
+      assert.equals("C.md", vim.fn.expand("%:t"))
+
+      assert.is_true(notes.go_back())
+      assert.equals("A.md", vim.fn.expand("%:t"))
+
+      assert.is_false(notes.go_back())
+    end)
+  end)
 end)

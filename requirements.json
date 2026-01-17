@@ -74,7 +74,7 @@
             "Press Backspace again and verify you return to \"A.md\"",
             "Press Backspace again when no prior navigation entry exists and verify the plugin falls back to Neovim's default Backspace behavior for normal mode (or performs no action), without errors"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",

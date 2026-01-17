@@ -3,6 +3,7 @@ local notes = {}
 -- Use blink kinds when available; fall back for headless tests.
 local ok_types, blink_types = pcall(require, "blink.cmp.types")
 local completion_kinds = ok_types and blink_types.CompletionItemKind or vim.lsp.protocol.CompletionItemKind
+local nav_stack = {}
 
 -- Return sorted note name stems for Markdown files in cwd.
 local function list_note_stems(cwd)
@@ -224,7 +225,23 @@ function notes.follow_wikilink()
     end
   end
 
+  local current = vim.api.nvim_buf_get_name(0)
+  if current ~= "" then
+    table.insert(nav_stack, current)
+  end
+
   vim.cmd("edit " .. vim.fn.fnameescape(target))
+  return true
+end
+
+-- Return to the previous note after following wiki-links.
+function notes.go_back()
+  local previous = table.remove(nav_stack)
+  if not previous then
+    return false
+  end
+
+  vim.cmd("edit " .. vim.fn.fnameescape(previous))
   return true
 end
 

@@ -11,5 +11,13 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.api.nvim_feedkeys(keys, "n", false)
       end
     end, { buffer = event.buf, silent = true, desc = "Follow wiki-link" })
+
+    vim.keymap.set("n", "<BS>", function()
+      local notes = require("notes")
+      if not notes.go_back() then
+        local keys = vim.api.nvim_replace_termcodes("<BS>", true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
+      end
+    end, { buffer = event.buf, silent = true, desc = "Notes back" })
   end,
 })

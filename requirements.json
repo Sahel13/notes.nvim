@@ -43,7 +43,7 @@
             "Move the cursor to a line that is not within a wiki-link and press Enter in normal mode",
             "Verify the plugin does not perform a link jump and falls back to Neovim's default Enter behavior for normal mode"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",
@@ -58,7 +58,7 @@
             "Return to the previous note using the plugin back navigation and follow \"[[does_not_exist]]\" again",
             "Verify the existing \"does_not_exist.md\" file is opened and is not truncated or overwritten"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",

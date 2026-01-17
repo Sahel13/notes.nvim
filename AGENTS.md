@@ -21,6 +21,7 @@ This plugin has no build step.
 - Automated tests live in `tests/` and run via Plenary/Busted in headless Neovim.
 - Use the manual scenarios in `requirements.json` as the acceptance checklist.
 - When adding a feature, update or append steps in `requirements.json` to reflect new behavior.
+- Always add tests for any new functionality that is implemented.
 
 ## Commit & Pull Request Guidelines
 - This repository has no commit history yet, so no established convention exists.

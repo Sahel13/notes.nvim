@@ -75,6 +75,40 @@ local function closing_suffix(line, col)
   return "]]"
 end
 
+-- Return the wiki-link text under the cursor when inside [[...]].
+local function wikilink_under_cursor()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local col = cursor[2]
+  local line = vim.api.nvim_get_current_line()
+  local cursor_pos = col + 1
+
+  local before = line:sub(1, cursor_pos)
+  local open_start = before:match(".*()%[%[")
+  if not open_start then
+    return nil
+  end
+
+  local close_start = line:find("]]", open_start + 2, true)
+  if not close_start then
+    return nil
+  end
+
+  if cursor_pos < open_start + 2 or cursor_pos > close_start - 1 then
+    return nil
+  end
+
+  local link_text = line:sub(open_start + 2, close_start - 1)
+  if link_text == "" then
+    return nil
+  end
+
+  if link_text:find("[%[%]|]") or link_text:find("/") then
+    return nil
+  end
+
+  return link_text
+end
+
 -- Create a new blink.cmp source instance.
 function notes.new(opts)
   local self = setmetatable({}, { __index = notes })
@@ -131,6 +165,32 @@ function notes:get_completions(_, callback)
     is_incomplete_forward = false,
     is_incomplete_backward = false,
   })
+end
+
+-- Follow the wiki-link under the cursor, opening the target note if present.
+function notes.follow_wikilink()
+  if vim.bo.filetype ~= "markdown" then
+    return false
+  end
+
+  local link_text = wikilink_under_cursor()
+  if not link_text then
+    return false
+  end
+
+  local cwd = vim.fn.getcwd()
+  local target = cwd .. "/" .. link_text .. ".md"
+
+  if vim.fn.filereadable(target) == 0 then
+    local ok = pcall(vim.fn.writefile, {}, target)
+    if not ok then
+      vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
+      return false
+    end
+  end
+
+  vim.cmd("edit " .. vim.fn.fnameescape(target))
+  return true
 end
 
 return notes

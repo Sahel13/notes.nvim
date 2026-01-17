@@ -8,6 +8,8 @@
 - Completion now appends missing closing brackets for wiki-links; accepts `[[name]]` without manual `]]`.
 - Added Plenary test covering completion suffix behavior for missing `]]` and `]` cases.
 - `scripts/test.sh` now defaults `PLENARY_PATH` to `$HOME/.local/share/nvim/lazy/plenary.nvim` (still overridable).
+- Enter on `[[note]]` now opens the target note from :pwd and creates the file when missing.
+- Added tests for wiki-link following and missing-note creation.
 
 ## Tests run
 - `scripts/test.sh`

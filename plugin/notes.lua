@@ -1,9 +1,9 @@
 local group = vim.api.nvim_create_augroup("notes.nvim", { clear = true })
 
 vim.api.nvim_create_autocmd("FileType", {
-  group = group,
-  pattern = "markdown",
-  callback = function(event)
-    require("notes").apply_mappings(event.buf)
-  end,
+	group = group,
+	pattern = "markdown",
+	callback = function(event)
+		require("notes").apply_mappings(event.buf)
+	end,
 })

@@ -106,14 +106,29 @@
     },
     {
         "category": "functional",
-        "description": "Constrain all note discovery and navigation to the current working directory (:pwd) with a flat hierarchy assumption",
+        "description": "Creating a missing note via a wiki-link seeds the new file with a level-one header using the filename as the title",
         "steps": [
-            "Start Neovim with :pwd set to the notes directory",
-            "Verify wiki-link completion scans only files in :pwd and does not scan parent directories or subdirectories",
-            "Create a subdirectory under :pwd containing additional \"*.md\" files and verify they do not appear in completion suggestions and are not used for navigation resolution",
-            "Open a note containing a wiki-link \"[[name]]\" and verify link navigation resolves only to \"<pwd>/name.md\"",
-            "Change :pwd within Neovim to a different directory and verify subsequent completion, navigation, and backlink search use the new :pwd"
+            "Open Neovim with :pwd set to the notes directory",
+            "Open a Markdown file containing a wiki-link to a non-existent note such as \"[[new_note]]\"",
+            "Place the cursor inside \"[[new_note]]\" and press Enter in normal mode",
+            "Verify a new file named \"new_note.md\" is created in :pwd",
+            "Verify the new file opens in the current window",
+            "Verify the first line of the new file is a level-one Markdown header that matches the filename stem (\"# new_note\")",
+            "Verify the header is only added when the file is created; subsequent opens do not duplicate or alter the header"
         ],
         "passes": false
-    }
+    },
+    {
+        "category": "functional",
+        "description": "Provide non-Tree-sitter syntax highlighting for wiki-links [[...]] using the same highlight group as normal Markdown link text",
+        "steps": [
+            "Disable Tree-sitter highlighting for Markdown in Neovim",
+            "Open a Markdown file containing both a normal link like \"[Label](https://example.com)\" and a wiki-link like \"[[Label]]\"",
+            "Verify the wiki-link text is highlighted with the same color/style as the normal link text",
+            "Verify only the wiki-link text is highlighted (not surrounding brackets or other text on the line)",
+            "Temporarily remove or rename the plugin's markdown syntax override and verify wiki-link highlighting no longer appears",
+            "Verify the behavior works for multiple wiki-links on the same line and across multiple lines"
+        ],
+        "passes": true
+    },
 ]

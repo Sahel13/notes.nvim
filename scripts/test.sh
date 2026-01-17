@@ -8,20 +8,7 @@ if ! command -v nvim >/dev/null 2>&1; then
   exit 1
 fi
 
-PLENARY_PATH="${PLENARY_PATH:-}"
-if [ -z "$PLENARY_PATH" ]; then
-  for p in \
-    "$HOME/.local/share/nvim/lazy/plenary.nvim" \
-    "$HOME/.local/share/nvim/site/pack/packer/start/plenary.nvim" \
-    "$HOME/.local/share/nvim/site/pack/packer/opt/plenary.nvim" \
-    "$HOME/.local/share/nvim/site/pack/lazy/start/plenary.nvim" \
-    "$HOME/.local/share/nvim/site/pack/lazy/opt/plenary.nvim"; do
-    if [ -d "$p" ]; then
-      PLENARY_PATH="$p"
-      break
-    fi
-  done
-fi
+PLENARY_PATH="${PLENARY_PATH:-$HOME/.local/share/nvim/lazy/plenary.nvim}"
 
 if [ -z "$PLENARY_PATH" ] || [ ! -d "$PLENARY_PATH" ]; then
   echo "Plenary not found. Set PLENARY_PATH to your plenary.nvim directory." >&2

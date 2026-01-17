@@ -63,6 +63,18 @@ local function wikilink_range()
   }
 end
 
+-- Return the suffix needed to close a wiki-link after completion.
+local function closing_suffix(line, col)
+  local after = line:sub(col + 1, col + 2)
+  if after == "]]" then
+    return ""
+  end
+  if after:sub(1, 1) == "]" then
+    return "]"
+  end
+  return "]]"
+end
+
 -- Create a new blink.cmp source instance.
 function notes.new(opts)
   local self = setmetatable({}, { __index = notes })
@@ -92,6 +104,10 @@ function notes:get_completions(_, callback)
     return
   end
 
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  local suffix = closing_suffix(line, cursor[2])
+
   local cwd = vim.fn.getcwd()
   local stems = list_note_stems(cwd)
   local items = {}
@@ -101,7 +117,7 @@ function notes:get_completions(_, callback)
       label = stem,
       kind = completion_kinds.Text,
       textEdit = {
-        newText = stem,
+        newText = stem .. suffix,
         range = {
           start = { line = range.line, character = range.start_col },
           ["end"] = { line = range.line, character = range.end_col },

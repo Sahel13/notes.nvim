@@ -14,7 +14,7 @@
             "Create a new \"newnote.md\" file in :pwd (outside of Neovim or within Neovim) and re-trigger completion; verify the new note name appears without requiring an editor restart",
             "Delete or rename an existing note file in :pwd and re-trigger completion; verify stale entries are not suggested"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",
@@ -27,7 +27,7 @@
             "Verify the resulting text is a full wiki-link with closing brackets (e.g., \"[[alpha]]\") without requiring manual \"\"]]\" insertion",
             "Verify the completion inserts only the note name as the link text (no \".md\")"
         ],
-        "passes": false
+        "passes": true
     },
     {
         "category": "functional",

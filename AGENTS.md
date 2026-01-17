@@ -3,7 +3,6 @@
 ## Project Structure & Module Organization
 - `lua/notes.lua` contains the plugin’s Lua implementation and is the primary entry point today.
 - `plugin/` is reserved for Neovim runtime entrypoints.
-- `requirements.json` documents expected behaviors and manual acceptance steps.
 
 ## Build, Test, and Development Commands
 This plugin has no build step.
@@ -22,14 +21,12 @@ This plugin has no build step.
 - Always add tests for any new functionality that is implemented.
 - Always run tests and ensure they pass after you're done modifying code.
 - Format Lua files with `stylua` before committing changes.
-- Use the manual scenarios in `requirements.json` as the acceptance checklist.
-- When adding a feature, update or append steps in `requirements.json` to reflect new behavior.
 
 ## Commit & Pull Request Guidelines
 - Use concise, informative commit titles (short, imperative).
 - Include a descriptive commit body explaining what features were implemented and how.
-- For PRs, include a brief summary, any updated `requirements.json` steps, and a note on how you manually verified changes.
+- For PRs, include a brief summary and a note on how you manually verified changes.
 
 ## Agent-Specific Notes
-- Keep behavior constrained to the current working directory (`:pwd`) as outlined in `requirements.json`.
+- Keep behavior constrained to the current working directory (`:pwd`).
 - Avoid adding dependencies unless required for new functionality.

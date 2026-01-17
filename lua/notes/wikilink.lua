@@ -11,7 +11,7 @@ function M.last_open_start(line, cursor_pos)
 	local search_from = 1
 	while true do
 		local found = line:find("[[", search_from, true)
-		if not found or found >= cursor_pos then
+		if not found or found > cursor_pos then
 			break
 		end
 		open_start = found
@@ -36,7 +36,7 @@ function M.wikilink_bounds(line, cursor_pos, require_close)
 	end
 
 	if require_close then
-		if cursor_pos < open_start + 2 or cursor_pos > close_start - 1 then
+		if cursor_pos < open_start or cursor_pos > close_start + 1 then
 			return nil
 		end
 	elseif close_start + 1 < cursor_pos then

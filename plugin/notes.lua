@@ -7,7 +7,8 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "<CR>", function()
       local notes = require("notes")
       if not notes.follow_wikilink() then
-        vim.cmd("normal! \\<CR>")
+        local keys = vim.api.nvim_replace_termcodes("<CR>", true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
       end
     end, { buffer = event.buf, silent = true, desc = "Follow wiki-link" })
   end,

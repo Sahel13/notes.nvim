@@ -1,0 +1,4 @@
+; Highlight wiki-links [[...]] using the same capture as normal Markdown link text.
+((inline) @markup.link.label
+  (#match? @markup.link.label "\\[\\[[^\\]\\n]+\\]\\]")
+  (#offset! @markup.link.label 0 2 0 -2))

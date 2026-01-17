@@ -4,7 +4,7 @@ vim.opt.rtp:prepend(root)
 
 local plenary = os.getenv("PLENARY_PATH")
 if plenary and plenary ~= "" then
-  vim.opt.rtp:prepend(plenary)
+	vim.opt.rtp:prepend(plenary)
 end
 
 vim.opt.swapfile = false

@@ -303,20 +303,19 @@ describe("notes.nvim", function()
 		})
 	end)
 
-	it("ships a Tree-sitter highlight query for wiki-links", function()
+	it("ships a non-Tree-sitter syntax highlight file for wiki-links", function()
 		local source = debug.getinfo(1, "S").source
 		local script = source
 		if script:sub(1, 1) == "@" then
 			script = script:sub(2)
 		end
 		local root = vim.fn.fnamemodify(script, ":h:h")
-		local query_path = root .. "/queries/markdown_inline/highlights.scm"
-		assert.equals(1, vim.fn.filereadable(query_path))
+		local syntax_path = root .. "/after/syntax/markdown.vim"
+		assert.equals(1, vim.fn.filereadable(syntax_path))
 
-		local lines = vim.fn.readfile(query_path)
+		local lines = vim.fn.readfile(syntax_path)
 		local content = table.concat(lines, "\n")
-		assert.is_true(content:find("@markup%.link%.label") ~= nil)
-		assert.is_true(content:find("#match%?") ~= nil)
-		assert.is_true(content:find("#offset!") ~= nil)
+		assert.is_true(content:find("markdownWikiLink") ~= nil)
+		assert.is_true(content:find("markdownLinkText") ~= nil)
 	end)
 end)

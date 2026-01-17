@@ -120,13 +120,13 @@
     },
     {
         "category": "functional",
-        "description": "Provide Tree-sitter highlighting for wiki-links [[...]] using the same highlight capture as normal Markdown link text",
+        "description": "Provide non-Tree-sitter syntax highlighting for wiki-links [[...]] using the same highlight group as normal Markdown link text",
         "steps": [
-            "Open Neovim with Tree-sitter highlighting enabled for Markdown",
+            "Disable Tree-sitter highlighting for Markdown in Neovim",
             "Open a Markdown file containing both a normal link like \"[Label](https://example.com)\" and a wiki-link like \"[[Label]]\"",
             "Verify the wiki-link text is highlighted with the same color/style as the normal link text",
             "Verify only the wiki-link text is highlighted (not surrounding brackets or other text on the line)",
-            "Disable or remove the plugin's Tree-sitter query override and verify wiki-link highlighting no longer appears, confirming it is provided by the plugin",
+            "Temporarily remove or rename the plugin's markdown syntax override and verify wiki-link highlighting no longer appears",
             "Verify the behavior works for multiple wiki-links on the same line and across multiple lines"
         ],
         "passes": true

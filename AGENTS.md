@@ -21,6 +21,7 @@ This plugin has no build step.
 - Automated tests live in `tests/` and run via Plenary/Busted in headless Neovim.
 - Always add tests for any new functionality that is implemented.
 - Always run tests and ensure they pass after you're done modifying code.
+- Format Lua files with `stylua` before committing changes.
 - Use the manual scenarios in `requirements.json` as the acceptance checklist.
 - When adding a feature, update or append steps in `requirements.json` to reflect new behavior.
 

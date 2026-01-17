@@ -1,0 +1,106 @@
+[
+    {
+        "category": "functional",
+        "description": "Provide wiki-link autocompletion for note names inside [[...]] using blink.cmp by scanning Markdown files in :pwd (flat directory only)",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Ensure the directory contains multiple Markdown notes with filenames like \"alpha.md\", \"beta.md\", \"project-notes.md\" (flat; no subdirectories used)",
+            "Open any Markdown buffer in that Neovim instance and enter insert mode",
+            "Type \"[[\" and start typing a partial note name (e.g., \"a\" for \"alpha\") with the cursor positioned between the opening brackets and a not-yet-typed closing \"]]\"",
+            "Verify blink.cmp shows completion suggestions whose labels match the available note names discovered by scanning :pwd for \"*.md\"",
+            "Verify completion suggestions insert only the note name (stem) between \"[[\" and \"]]\" (e.g., completing \"alpha\" results in \"[[alpha]]\"; not \"[[alpha.md]]\")",
+            "Verify suggestions do not include non-Markdown files in :pwd",
+            "Verify suggestions are available only while the cursor is between \"[[\" and \"]]\" (no suggestions from this source outside that context)",
+            "Create a new \"newnote.md\" file in :pwd (outside of Neovim or within Neovim) and re-trigger completion; verify the new note name appears without requiring an editor restart",
+            "Delete or rename an existing note file in :pwd and re-trigger completion; verify stale entries are not suggested"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "Follow a wiki-link under the cursor by pressing Enter in normal mode, opening the linked Markdown file from :pwd",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Open a Markdown file that contains one or more wiki-links in the exact form \"[[noteName]]\" (no aliases, no paths)",
+            "Place the cursor anywhere inside the wiki-link text region (between the double brackets)",
+            "Press Enter in normal mode",
+            "Verify the plugin detects that the cursor is within a \"[[...]]\" link and attempts to open the target note from :pwd",
+            "Verify the target resolution is \"<pwd>/<noteName>.md\" (using the link text as the stem and \".md\" as the extension)",
+            "Verify the linked file is opened with :edit (current window) and the cursor is placed at the start of the file (default behavior is acceptable)",
+            "Move the cursor to a line that is not within a wiki-link and press Enter in normal mode",
+            "Verify the plugin does not perform a link jump and falls back to Neovim's default Enter behavior for normal mode"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "If the linked note does not exist in :pwd, following [[...]] creates <noteName>.md and opens it",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Open a Markdown file containing a wiki-link to a non-existent note such as \"[[does_not_exist]]\"",
+            "Place the cursor inside \"[[does_not_exist]]\" and press Enter in normal mode",
+            "Verify a new file named \"does_not_exist.md\" is created in :pwd",
+            "Verify the newly created \"does_not_exist.md\" is opened in the current window (using :edit)",
+            "Verify the created file is not automatically populated with any additional template content (empty file is acceptable)",
+            "Return to the previous note using the plugin back navigation and follow \"[[does_not_exist]]\" again",
+            "Verify the existing \"does_not_exist.md\" file is opened and is not truncated or overwritten"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "Maintain a navigation stack so that after following wiki-links, pressing Backspace in normal mode returns to the previous file",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Open \"A.md\" and ensure it contains a valid wiki-link \"[[B]]\" where \"B.md\" exists in :pwd",
+            "Place the cursor inside \"[[B]]\" and press Enter in normal mode to open \"B.md\"",
+            "Press Backspace in normal mode",
+            "Verify Neovim returns to \"A.md\" in the same window (using :edit to restore the prior file)",
+            "From \"A.md\", follow another link (e.g., \"[[C]]\" to \"C.md\"), then from \"C.md\" follow a link to \"[[D]]\" (\"D.md\")",
+            "Press Backspace once and verify you return to \"C.md\"",
+            "Press Backspace again and verify you return to \"A.md\"",
+            "Press Backspace again when no prior navigation entry exists and verify the plugin falls back to Neovim's default Backspace behavior for normal mode (or performs no action), without errors"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "Expose a Lua function that finds backlinks (notes linking to the current note via [[currentNote]]) and populates the quickfix list using ripgrep",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Ensure multiple notes exist in :pwd such that some contain links to the current note using the exact pattern \"[[currentNoteName]]\" (no aliases)",
+            "Open the target note file (the one being linked to) in Neovim (e.g., open \"target.md\" where links are \"[[target]]\")",
+            "Invoke the plugin's Lua function for backlinks (e.g., from :lua) while \"target.md\" is the current buffer",
+            "Verify the function computes the current note name from the current buffer filename stem (\"target\" from \"target.md\")",
+            "Verify the function runs ripgrep constrained to :pwd to search Markdown files for the literal wiki-link text \"[[target]]\"",
+            "Verify the function parses ripgrep output into quickfix items containing at minimum: filename, line number, column (if available), and a display text showing the matching line",
+            "Verify the quickfix list is replaced with these backlink results and :copen displays them",
+            "Select a quickfix entry and verify it opens the referring note at the matching location"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "Backlinks search uses ripgrep robustly and fails gracefully if ripgrep is unavailable",
+        "steps": [
+            "Open Neovim with :pwd set to the notes directory",
+            "Invoke the backlinks Lua function when ripgrep (rg) is not available on PATH (or simulate failure by forcing the rg command to error in the implementation)",
+            "Verify the function does not crash or throw an unhandled Lua error",
+            "Verify a clear error is shown to the user indicating ripgrep is required for backlinks",
+            "Verify the quickfix list is not replaced with invalid/empty data due to the failure"
+        ],
+        "passes": false
+    },
+    {
+        "category": "functional",
+        "description": "Constrain all note discovery and navigation to the current working directory (:pwd) with a flat hierarchy assumption",
+        "steps": [
+            "Start Neovim with :pwd set to the notes directory",
+            "Verify wiki-link completion scans only files in :pwd and does not scan parent directories or subdirectories",
+            "Create a subdirectory under :pwd containing additional \"*.md\" files and verify they do not appear in completion suggestions and are not used for navigation resolution",
+            "Open a note containing a wiki-link \"[[name]]\" and verify link navigation resolves only to \"<pwd>/name.md\"",
+            "Change :pwd within Neovim to a different directory and verify subsequent completion, navigation, and backlink search use the new :pwd"
+        ],
+        "passes": false
+    }
+]

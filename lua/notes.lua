@@ -1,0 +1,1 @@
+print "loaded notes.nvim"

@@ -1,0 +1,6 @@
+describe("notes.nvim", function()
+  it("loads the module", function()
+    local ok = require("notes")
+    assert.is_true(ok == true)
+  end)
+end)

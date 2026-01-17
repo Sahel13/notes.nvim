@@ -13,6 +13,8 @@ local config = {
 		back = "<BS>",
 		backlinks = "<leader>nb",
 		daily_note = "<leader>nd",
+		next_wikilink = "<Tab>",
+		prev_wikilink = "<S-Tab>",
 	},
 }
 
@@ -162,6 +164,26 @@ function notes.apply_mappings(buf)
 			notes.open_daily_note()
 		end, { buffer = target_buf, silent = true, desc = "Open daily note" })
 	end
+
+	if mappings.next_wikilink then
+		local next_map = mappings.next_wikilink
+		vim.keymap.set("n", next_map, function()
+			if not notes.jump_to_next_wikilink() then
+				local keys = vim.api.nvim_replace_termcodes(next_map, true, false, true)
+				vim.api.nvim_feedkeys(keys, "n", false)
+			end
+		end, { buffer = target_buf, silent = true, desc = "Jump to next wiki-link" })
+	end
+
+	if mappings.prev_wikilink then
+		local prev_map = mappings.prev_wikilink
+		vim.keymap.set("n", prev_map, function()
+			if not notes.jump_to_prev_wikilink() then
+				local keys = vim.api.nvim_replace_termcodes(prev_map, true, false, true)
+				vim.api.nvim_feedkeys(keys, "n", false)
+			end
+		end, { buffer = target_buf, silent = true, desc = "Jump to previous wiki-link" })
+	end
 end
 
 -- Find backlinks to the current note and populate the quickfix list.
@@ -231,6 +253,72 @@ function notes.open_daily_note()
 
 	vim.cmd("edit " .. vim.fn.fnameescape(target))
 	return true
+end
+
+-- Jump to the next wiki-link in the buffer.
+function notes.jump_to_next_wikilink()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	local cursor = vim.api.nvim_win_get_cursor(0)
+	local row = cursor[1]
+	local cursor_col0 = cursor[2]
+	local line = vim.api.nvim_get_current_line()
+	local cursor_pos = wikilink.cursor_pos_from_col(cursor_col0)
+
+	-- Search current line first
+	local next_pos = wikilink.find_next_wikilink(line, cursor_pos)
+	if next_pos then
+		vim.api.nvim_win_set_cursor(0, { row, next_pos - 1 })
+		return true
+	end
+
+	-- Search subsequent lines
+	local total_lines = vim.api.nvim_buf_line_count(0)
+	for i = row + 1, total_lines do
+		local next_line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+		next_pos = wikilink.find_next_wikilink(next_line, 0)
+		if next_pos then
+			vim.api.nvim_win_set_cursor(0, { i, next_pos - 1 })
+			return true
+		end
+	end
+
+	return false
+end
+
+-- Jump to the previous wiki-link in the buffer.
+function notes.jump_to_prev_wikilink()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	local cursor = vim.api.nvim_win_get_cursor(0)
+	local row = cursor[1]
+	local cursor_col0 = cursor[2]
+	local line = vim.api.nvim_get_current_line()
+	local cursor_pos = wikilink.cursor_pos_from_col(cursor_col0)
+
+	-- Search current line first
+	local prev_pos = wikilink.find_prev_wikilink(line, cursor_pos)
+	if prev_pos then
+		vim.api.nvim_win_set_cursor(0, { row, prev_pos - 1 })
+		return true
+	end
+
+	-- Search previous lines
+	for i = row - 1, 1, -1 do
+		local prev_line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+		-- Find the last wikilink on this line
+		prev_pos = wikilink.find_prev_wikilink(prev_line, #prev_line + 1)
+		if prev_pos then
+			vim.api.nvim_win_set_cursor(0, { i, prev_pos - 1 })
+			return true
+		end
+	end
+
+	return false
 end
 
 return notes

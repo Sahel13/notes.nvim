@@ -102,4 +102,25 @@ function M.wikilink_under_cursor()
 	return link_text
 end
 
+-- Find the next wiki-link opening after the cursor position.
+function M.find_next_wikilink(line, cursor_pos)
+	local found = line:find("[[", cursor_pos + 1, true)
+	return found
+end
+
+-- Find the previous wiki-link opening before the cursor position.
+function M.find_prev_wikilink(line, cursor_pos)
+	local prev_start
+	local search_from = 1
+	while true do
+		local found = line:find("[[", search_from, true)
+		if not found or found >= cursor_pos then
+			break
+		end
+		prev_start = found
+		search_from = found + 2
+	end
+	return prev_start
+end
+
 return M

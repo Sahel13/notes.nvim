@@ -9,6 +9,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 [`blink.cmp`](https://github.com/Saghen/blink.cmp), scanning Markdown files in `:pwd` (flat directory).
 - Follow `[[note]]` with Enter to open or create `note.md` in `:pwd`.
 - Back navigation stack with Backspace after following links.
+- Navigate between wiki-links with Tab (next) and Shift+Tab (previous).
 - Backlinks search into the quickfix list using [`ripgrep`](https://github.com/BurntSushi/ripgrep).
 - Daily notes with automatic date-based filename (`YYYY-MM-DD.md`) and formatted title.
 
@@ -36,6 +37,8 @@ opts = {
     mappings = {
         follow = "<CR>",
         back = "<BS>",
+        next_wikilink = "<Tab>",
+        prev_wikilink = "<S-Tab>",
         backlinks = "<leader>nb",
         daily_note = "<leader>nd",
     },

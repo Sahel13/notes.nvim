@@ -450,4 +450,148 @@ describe("notes.nvim", function()
 			assert.is_true(has_mapping("Open daily note", "<leader>nd"))
 		end)
 	end)
+
+	describe("jump_to_next_wikilink", function()
+		it("jumps to next wikilink on same line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("text [[first]] and [[second]]")
+				vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+				local handled = notes.jump_to_next_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(1, cursor[1])
+				assert.equals(5, cursor[2])
+			end)
+		end)
+
+		it("jumps to next wikilink on subsequent line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_buf_set_lines(0, 0, -1, false, { "no link", "has [[link]]" })
+				vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+				local handled = notes.jump_to_next_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(2, cursor[1])
+				assert.equals(4, cursor[2])
+			end)
+		end)
+
+		it("returns false when no wikilink found", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("no links here")
+				vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+				local handled = notes.jump_to_next_wikilink()
+				assert.is_false(handled)
+			end)
+		end)
+
+		it("skips to next line when no wikilink ahead on current line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_buf_set_lines(0, 0, -1, false, { "[[first]] end", "[[second]]" })
+				vim.api.nvim_win_set_cursor(0, { 1, 10 })
+
+				local handled = notes.jump_to_next_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(2, cursor[1])
+				assert.equals(0, cursor[2])
+			end)
+		end)
+
+		it("returns false for non-markdown buffers", function()
+			local notes = require("notes")
+			local buf = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_set_current_buf(buf)
+			vim.bo.filetype = "text"
+
+			vim.api.nvim_set_current_line("[[link]]")
+			vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+			local handled = notes.jump_to_next_wikilink()
+			assert.is_false(handled)
+
+			if vim.api.nvim_buf_is_valid(buf) then
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end)
+	end)
+
+	describe("jump_to_prev_wikilink", function()
+		it("jumps to previous wikilink on same line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("[[first]] and [[second]]")
+				vim.api.nvim_win_set_cursor(0, { 1, 20 })
+
+				local handled = notes.jump_to_prev_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(1, cursor[1])
+				assert.equals(14, cursor[2])
+			end)
+		end)
+
+		it("jumps to previous wikilink on previous line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_buf_set_lines(0, 0, -1, false, { "has [[link]]", "no link" })
+				vim.api.nvim_win_set_cursor(0, { 2, 0 })
+
+				local handled = notes.jump_to_prev_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(1, cursor[1])
+				assert.equals(4, cursor[2])
+			end)
+		end)
+
+		it("returns false when no wikilink found", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("no links here")
+				vim.api.nvim_win_set_cursor(0, { 1, 5 })
+
+				local handled = notes.jump_to_prev_wikilink()
+				assert.is_false(handled)
+			end)
+		end)
+
+		it("finds last wikilink on previous line", function()
+			local notes = require("notes")
+			with_markdown_buf(function()
+				vim.api.nvim_buf_set_lines(0, 0, -1, false, { "[[first]] [[second]]", "text" })
+				vim.api.nvim_win_set_cursor(0, { 2, 2 })
+
+				local handled = notes.jump_to_prev_wikilink()
+				assert.is_true(handled)
+				local cursor = vim.api.nvim_win_get_cursor(0)
+				assert.equals(1, cursor[1])
+				assert.equals(10, cursor[2])
+			end)
+		end)
+
+		it("returns false for non-markdown buffers", function()
+			local notes = require("notes")
+			local buf = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_set_current_buf(buf)
+			vim.bo.filetype = "text"
+
+			vim.api.nvim_set_current_line("[[link]]")
+			vim.api.nvim_win_set_cursor(0, { 1, 5 })
+
+			local handled = notes.jump_to_prev_wikilink()
+			assert.is_false(handled)
+
+			if vim.api.nvim_buf_is_valid(buf) then
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end)
+	end)
 end)

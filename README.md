@@ -10,6 +10,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 - Follow `[[note]]` with Enter to open or create `note.md` in `:pwd`.
 - Back navigation stack with Backspace after following links.
 - Backlinks search into the quickfix list using [`ripgrep`](https://github.com/BurntSushi/ripgrep).
+- Daily notes with automatic date-based filename (`YYYY-MM-DD.md`) and formatted title.
 
 ## Installation
 
@@ -36,8 +37,9 @@ opts = {
         follow = "<CR>",
         back = "<BS>",
         backlinks = "<leader>nb",
+        daily_note = "<leader>nd",
     },
 }
 ```
 
-Set any mapping to `false` to disable it. If you disable the backlinks mapping, you can still run `:lua require("notes").find_backlinks()`.
+Set any mapping to `false` to disable it. If you disable the backlinks mapping, you can still run `:lua require("notes").find_backlinks()`. Similarly, the daily note function is available as `:lua require("notes").open_daily_note()`.

@@ -2,6 +2,7 @@
 local notes = {}
 local fs = require("notes.fs")
 local wikilink = require("notes.wikilink")
+local date = require("notes.date")
 -- Use blink kinds when available; fall back for headless tests.
 local ok_types, blink_types = pcall(require, "blink.cmp.types")
 local completion_kinds = ok_types and blink_types.CompletionItemKind or vim.lsp.protocol.CompletionItemKind
@@ -11,6 +12,7 @@ local config = {
 		follow = "<CR>",
 		back = "<BS>",
 		backlinks = "<leader>nb",
+		daily_note = "<leader>nd",
 	},
 }
 
@@ -154,6 +156,12 @@ function notes.apply_mappings(buf)
 			notes.find_backlinks()
 		end, { buffer = target_buf, silent = true, desc = "Notes backlinks" })
 	end
+
+	if mappings.daily_note then
+		vim.keymap.set("n", mappings.daily_note, function()
+			notes.open_daily_note()
+		end, { buffer = target_buf, silent = true, desc = "Open daily note" })
+	end
 end
 
 -- Find backlinks to the current note and populate the quickfix list.
@@ -203,6 +211,25 @@ function notes.find_backlinks()
 		items = items,
 	})
 	vim.cmd("copen")
+	return true
+end
+
+-- Open or create the daily note for today.
+function notes.open_daily_note()
+	local cwd = vim.fn.getcwd()
+	local filename = date.daily_filename()
+	local target = cwd .. "/" .. filename
+
+	if vim.fn.filereadable(target) == 0 then
+		local title = date.daily_title()
+		local ok = pcall(vim.fn.writefile, { "# " .. title }, target)
+		if not ok then
+			vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
+			return false
+		end
+	end
+
+	vim.cmd("edit " .. vim.fn.fnameescape(target))
 	return true
 end
 

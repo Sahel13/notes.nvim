@@ -343,4 +343,111 @@ describe("notes.nvim", function()
 		assert.is_true(content:find("markdownWikiLink") ~= nil)
 		assert.is_true(content:find("markdownLinkText") ~= nil)
 	end)
+
+	it("creates daily note with correct filename and title", function()
+		local notes = require("notes")
+		local date = require("notes.date")
+
+		with_temp_dir({}, function(tmp_dir)
+			local timestamp = os.time({ year = 2026, month = 1, day = 17, hour = 12, min = 0, sec = 0 })
+			local filename = date.daily_filename(timestamp)
+			local title = date.daily_title(timestamp)
+			local daily_path = tmp_dir .. "/" .. filename
+
+			-- Stub the date functions to use our test timestamp
+			local original_daily_filename = date.daily_filename
+			local original_daily_title = date.daily_title
+			date.daily_filename = function()
+				return filename
+			end
+			date.daily_title = function()
+				return title
+			end
+
+			with_markdown_buf(function()
+				local handled = notes.open_daily_note()
+				assert.is_true(handled)
+				assert.equals(filename, vim.fn.expand("%:t"))
+				assert.equals(1, vim.fn.filereadable(daily_path))
+				assert.same({ "# " .. title }, vim.fn.readfile(daily_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			-- Restore original functions
+			date.daily_filename = original_daily_filename
+			date.daily_title = original_daily_title
+		end)
+	end)
+
+	it("opens existing daily note without overwriting", function()
+		local notes = require("notes")
+		local date = require("notes.date")
+
+		with_temp_dir({}, function(tmp_dir)
+			local timestamp = os.time({ year = 2026, month = 1, day = 17, hour = 12, min = 0, sec = 0 })
+			local filename = date.daily_filename(timestamp)
+			local title = date.daily_title(timestamp)
+			local daily_path = tmp_dir .. "/" .. filename
+
+			-- Create existing daily note with content
+			vim.fn.writefile({ "# " .. title, "", "Existing content" }, daily_path)
+
+			-- Stub the date functions
+			local original_daily_filename = date.daily_filename
+			local original_daily_title = date.daily_title
+			date.daily_filename = function()
+				return filename
+			end
+			date.daily_title = function()
+				return title
+			end
+
+			with_markdown_buf(function()
+				local handled = notes.open_daily_note()
+				assert.is_true(handled)
+				assert.equals(filename, vim.fn.expand("%:t"))
+				assert.same({ "# " .. title, "", "Existing content" }, vim.fn.readfile(daily_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			-- Restore original functions
+			date.daily_filename = original_daily_filename
+			date.daily_title = original_daily_title
+		end)
+	end)
+
+	it("includes daily note mapping in apply_mappings", function()
+		local notes = require("notes")
+		notes.setup({
+			mappings = {
+				follow = "<CR>",
+				back = "<BS>",
+				backlinks = "<leader>nb",
+				daily_note = "<leader>nd",
+			},
+		})
+
+		with_markdown_buf(function(buf)
+			vim.api.nvim_set_current_buf(buf)
+			local calls = {}
+			with_stubbed(vim.keymap, "set", function(mode, lhs, _, opts)
+				table.insert(calls, { mode = mode, lhs = lhs, desc = opts and opts.desc or "" })
+			end, function()
+				notes.apply_mappings(buf)
+			end)
+
+			local function has_mapping(desc, lhs)
+				for _, call in ipairs(calls) do
+					if call.desc == desc and call.lhs == lhs then
+						return true
+					end
+				end
+				return false
+			end
+
+			assert.is_true(has_mapping("Open daily note", "<leader>nd"))
+		end)
+	end)
 end)

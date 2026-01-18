@@ -3,6 +3,7 @@
 ## Project Structure & Module Organization
 - `lua/notes.lua` contains the plugin’s Lua implementation and is the primary entry point today.
 - `plugin/` is reserved for Neovim runtime entrypoints.
+- `doc/` contains the documentation for the plugin.
 
 ## Build, Test, and Development Commands
 This plugin has no build step.
@@ -30,3 +31,4 @@ This plugin has no build step.
 ## Agent-Specific Notes
 - Keep behavior constrained to the current working directory (`:pwd`).
 - Avoid adding dependencies unless required for new functionality.
+- If any functionality has changed, update `doc/notes.txt` to document it properly.

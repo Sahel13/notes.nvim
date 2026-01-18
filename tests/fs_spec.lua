@@ -76,6 +76,27 @@ describe("notes.fs", function()
 		end)
 	end)
 
+	it("excludes empty stems like .md", function()
+		with_temp_dir({
+			{ name = ".md", lines = { "empty" } },
+			{ name = "valid.md", lines = { "valid" } },
+		}, function(tmp_dir)
+			local stems = fs.list_note_stems(tmp_dir)
+			assert.equals(1, #stems)
+			assert.equals("valid", stems[1])
+		end)
+	end)
+
+	it("includes hidden markdown files", function()
+		with_temp_dir({
+			{ name = ".hidden.md", lines = { "hidden" } },
+		}, function(tmp_dir)
+			local stems = fs.list_note_stems(tmp_dir)
+			assert.equals(1, #stems)
+			assert.equals(".hidden", stems[1])
+		end)
+	end)
+
 	it("sorts stems alphabetically", function()
 		with_temp_dir({
 			{ name = "zebra.md", lines = { "# zebra" } },

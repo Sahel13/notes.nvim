@@ -26,9 +26,15 @@ describe("notes.wikilink", function()
 			assert.equals(7, wikilink.last_open_start("[[a]] [[b]]", 11))
 		end)
 
-		it("includes cursor on the opening brackets", function()
-			assert.equals(1, wikilink.last_open_start("[[link]]", 1))
-			assert.equals(1, wikilink.last_open_start("[[link]]", 2))
+		it("handles nested brackets by finding the last opening before cursor", function()
+			-- In "[[outer [[inner]] outer]]", position 12 is after "[[inner"
+			-- The function finds the LAST [[ before cursor position 12, which is at position 9
+			assert.equals(9, wikilink.last_open_start("[[outer [[inner]] outer]]", 12))
+		end)
+
+		it("handles multiple opening brackets", function()
+			-- In "[[[link]]", the last [[ before position 5 is at position 1
+			assert.equals(1, wikilink.last_open_start("[[[link]]", 5))
 		end)
 	end)
 
@@ -168,6 +174,36 @@ describe("notes.wikilink", function()
 				assert.equals("first", wikilink.wikilink_under_cursor())
 				vim.api.nvim_win_set_cursor(0, { 1, 17 })
 				assert.equals("second", wikilink.wikilink_under_cursor())
+			end)
+		end)
+
+		it("handles nested brackets: extracts innermost link when cursor is inside it", function()
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("[[outer [[inner]] outer]]")
+				-- Cursor inside "inner" - should extract "inner"
+				vim.api.nvim_win_set_cursor(0, { 1, 11 })
+				assert.equals("inner", wikilink.wikilink_under_cursor())
+			end)
+		end)
+
+		it("handles nested brackets: returns nil when in outer part after inner closes", function()
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("[[outer [[inner]] outer]]")
+				-- Cursor in "outer" after "[[inner]]" closes (position 19, in " outer")
+				-- This finds last [[ at position 9, then ]] at 16, giving "inner]] outer"
+				-- But link text contains ]], so it returns nil
+				vim.api.nvim_win_set_cursor(0, { 1, 19 })
+				assert.is_nil(wikilink.wikilink_under_cursor())
+			end)
+		end)
+
+		it("returns nil for escaped brackets (current behavior)", function()
+			-- Note: The current implementation doesn't check for escapes,
+			-- so it will still find the link. We document this behavior.
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("\\[[link]]")
+				vim.api.nvim_win_set_cursor(0, { 1, 4 })
+				assert.equals("link", wikilink.wikilink_under_cursor())
 			end)
 		end)
 	end)

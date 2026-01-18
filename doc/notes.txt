@@ -238,7 +238,7 @@ Call functions directly: >vim
 ==============================================================================
 ABOUT                                                            *notes-about*
 
-License: MIT
+License: GPL-3.0
 
 Repository: https://github.com/Sahel13/notes.nvim
 

@@ -451,6 +451,195 @@ describe("notes.nvim", function()
 		end)
 	end)
 
+	it("handles self-referential links by opening the same buffer", function()
+		local notes = require("notes")
+		with_temp_dir({
+			{ name = "recursive.md", lines = { "# Recursive", "[[recursive]]" } },
+		}, function(tmp_dir)
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/recursive.md"))
+			vim.bo.filetype = "markdown"
+			vim.api.nvim_win_set_cursor(0, { 2, 4 })
+
+			local handled = notes.follow_wikilink()
+			assert.is_true(handled)
+			assert.equals("recursive.md", vim.fn.expand("%:t"))
+
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+		end)
+	end)
+
+	it("finds backlinks with note names containing special characters", function()
+		local notes = require("notes")
+		if vim.fn.executable("rg") == 0 then
+			return
+		end
+
+		with_temp_dir({
+			{ name = "target-note.md", lines = { "# target-note" } },
+			{ name = "alpha.md", lines = { "# alpha", "See [[target-note]] here" } },
+		}, function(tmp_dir)
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/target-note.md"))
+			vim.bo.filetype = "markdown"
+
+			local handled = notes.find_backlinks()
+			assert.is_true(handled)
+
+			local qf = vim.fn.getqflist({ title = 1, items = 1 })
+			assert.equals("Backlinks: target-note", qf.title)
+			assert.equals(1, #qf.items)
+
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+		end)
+	end)
+
+	it("jumps across multiple lines when finding next wikilink", function()
+		local notes = require("notes")
+		with_markdown_buf(function()
+			vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+				"line 1",
+				"line 2",
+				"line 3",
+				"line 4",
+				"line 5 has [[link]]",
+			})
+			vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+			local handled = notes.jump_to_next_wikilink()
+			assert.is_true(handled)
+			local cursor = vim.api.nvim_win_get_cursor(0)
+			assert.equals(5, cursor[1])
+			-- Cursor position is 0-based, so "line 5 has [[link]]" has [[ at position 11 (0-based)
+			assert.equals(11, cursor[2])
+		end)
+	end)
+
+	it("jumps across multiple lines when finding previous wikilink", function()
+		local notes = require("notes")
+		with_markdown_buf(function()
+			vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+				"line 1 has [[link]]",
+				"line 2",
+				"line 3",
+				"line 4",
+				"line 5",
+			})
+			vim.api.nvim_win_set_cursor(0, { 5, 0 })
+
+			local handled = notes.jump_to_prev_wikilink()
+			assert.is_true(handled)
+			local cursor = vim.api.nvim_win_get_cursor(0)
+			assert.equals(1, cursor[1])
+			assert.equals(11, cursor[2])
+		end)
+	end)
+
+	it("correctly disables individual mappings when set to false", function()
+		local notes = require("notes")
+		notes.setup({
+			mappings = {
+				follow = false,
+				back = false,
+				backlinks = false,
+				daily_note = false,
+				next_wikilink = false,
+				prev_wikilink = false,
+			},
+		})
+
+		with_markdown_buf(function(buf)
+			vim.api.nvim_set_current_buf(buf)
+			local calls = {}
+			with_stubbed(vim.keymap, "set", function(mode, lhs, _, opts)
+				table.insert(calls, { mode = mode, lhs = lhs, desc = opts and opts.desc or "" })
+			end, function()
+				notes.apply_mappings(buf)
+			end)
+
+			assert.equals(0, #calls)
+		end)
+
+		-- Reset to defaults
+		notes.setup({
+			mappings = {
+				follow = "<CR>",
+				back = "<BS>",
+				backlinks = "<leader>nb",
+				daily_note = "<leader>nd",
+				next_wikilink = "<Tab>",
+				prev_wikilink = "<S-Tab>",
+			},
+		})
+	end)
+
+	it("handles navigation stack with many jumps", function()
+		local notes = require("notes")
+		
+		-- Clear any existing navigation history by going back until empty
+		while notes.go_back() do
+			-- Keep going back
+		end
+		
+		with_temp_dir({}, function(tmp_dir)
+			-- Create 20 notes
+			for i = 1, 20 do
+				local filename = string.format("note%02d.md", i)
+				local next_note = i < 20 and string.format("note%02d", i + 1) or ""
+				local content = { "# Note " .. i }
+				if next_note ~= "" then
+					table.insert(content, "[[" .. next_note .. "]]")
+				end
+				vim.fn.writefile(content, tmp_dir .. "/" .. filename)
+			end
+
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/note01.md"))
+			vim.bo.filetype = "markdown"
+
+			-- Follow links through all 20 notes
+			for i = 1, 19 do
+				vim.api.nvim_win_set_cursor(0, { 2, 2 })
+				assert.is_true(notes.follow_wikilink())
+				vim.bo.filetype = "markdown"
+			end
+
+			assert.equals("note20.md", vim.fn.expand("%:t"))
+
+			-- Go back through all notes
+			for i = 19, 1, -1 do
+				assert.is_true(notes.go_back())
+				local expected = string.format("note%02d.md", i)
+				assert.equals(expected, vim.fn.expand("%:t"))
+			end
+
+			-- Should return false when stack is empty
+			assert.is_false(notes.go_back())
+
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+		end)
+	end)
+
+	it("handles find_backlinks when buffer has no name", function()
+		local notes = require("notes")
+		with_markdown_buf(function()
+			-- Buffer has no filename
+			local notices = {}
+			with_stubbed(vim, "notify", function(msg, level)
+				table.insert(notices, { msg = msg, level = level })
+			end, function()
+				local handled = notes.find_backlinks()
+				assert.is_false(handled)
+			end)
+
+			assert.is_true(#notices > 0)
+			assert.is_true(notices[1].msg:find("no filename") ~= nil)
+		end)
+	end)
+
 	describe("jump_to_next_wikilink", function()
 		it("jumps to next wikilink on same line", function()
 			local notes = require("notes")

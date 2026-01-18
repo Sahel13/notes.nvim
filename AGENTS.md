@@ -13,7 +13,6 @@ This plugin has no build step.
 
 ## Coding Style & Naming Conventions
 - Follow existing Lua style in `lua/notes.lua` and keep formatting minimal and readable.
-- Prefer 2-space indentation for new Lua blocks to stay compact.
 - Use descriptive, lowercase-with-underscores for Lua locals and functions (e.g., `find_backlinks`).
 - Add brief doc comments for new functions that describe what they do (not how).
 

@@ -7,3 +7,11 @@ vim.api.nvim_create_autocmd("FileType", {
 		require("notes").apply_mappings(event.buf)
 	end,
 })
+
+vim.api.nvim_create_autocmd("FileType", {
+	group = group,
+	pattern = "bib",
+	callback = function(event)
+		require("notes").apply_back_mapping(event.buf)
+	end,
+})

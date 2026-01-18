@@ -21,6 +21,9 @@ providing core vimwiki-style features for Neovim.
 Features:
   - Wiki-link completion via blink.cmp
   - Follow [[links]] to open or create notes
+  - Citation support with [@key] syntax (Pandoc-style)
+  - Citation completion from BibTeX files
+  - Follow citations to jump to bib entries
   - Back navigation after following links
   - Navigate between wiki-links with Tab/Shift-Tab
   - Find backlinks using ripgrep
@@ -72,8 +75,9 @@ CONFIGURATION                                     *notes-config* *notes-setup*
 Call `setup()` to configure the plugin: >lua
 
   require("notes").setup({
+    bib_file = "~/references.bib",  -- Path to your BibTeX file (optional)
     mappings = {
-      follow = "<CR>",           -- Follow wiki-link under cursor
+      follow = "<CR>",           -- Follow wiki-link or citation under cursor
       back = "<BS>",             -- Navigate back in link history
       next_wikilink = "<Tab>",   -- Jump to next wiki-link
       prev_wikilink = "<S-Tab>", -- Jump to previous wiki-link
@@ -105,21 +109,50 @@ Completions are provided by blink.cmp and scan all `.md` files in `:pwd`.
 The completion automatically adds the closing `]]` when needed.
 
 ------------------------------------------------------------------------------
+CITATION SUPPORT                                               *notes-citations*
+
+notes.nvim supports Pandoc-style citations with BibTeX integration.
+
+Configure a `.bib` file in your setup: >lua
+
+  require("notes").setup({
+    bib_file = "~/documents/references.bib",
+  })
+<
+
+Citation features:
+  - Type `[@` to trigger citation completion from your bib file
+  - Completions show citation keys with author/year metadata
+  - Follow citations with `<CR>` to open the bib file at that entry
+  - Supports compound citations: `[@key1; @key2]`
+  - Supports prefix/suffix: `[see @key, p. 20]`
+
+Example workflow: >
+
+  According to [@lindley1956measure], information theory...
+
+  " Press <CR> on [@lindley1956measure] to view the bib entry
+  " Type [@ to see completions of all available citations
+<
+
+------------------------------------------------------------------------------
 FOLLOWING LINKS                                                 *notes-follow*
 
-Press `<CR>` (or your configured mapping) on a `[[wiki-link]]` to open the
-target note. If the note doesn't exist, it will be created with a title
-heading.
+Press `<CR>` (or your configured mapping) on a `[[wiki-link]]` or `[@citation]`
+to open the target. For wiki-links, if the note doesn't exist, it will be
+created with a title heading. For citations, the configured bib file is opened
+with the cursor positioned at that entry.
 
 New notes are created in `:pwd` with the `.md` extension.
 
 ------------------------------------------------------------------------------
 BACK NAVIGATION                                                   *notes-back*
 
-After following wiki-links, press `<BS>` (or your configured mapping) to
-navigate back through your link history.
+After following wiki-links or citations, press `<BS>` (or your configured
+mapping) to navigate back through your link history.
 
-The navigation stack is maintained per Neovim session.
+The navigation stack is maintained per Neovim session. The back mapping is
+available in both Markdown files and BibTeX files.
 
 ------------------------------------------------------------------------------
 WIKILINK NAVIGATION                                          *notes-navigation*
@@ -158,6 +191,16 @@ notes.follow_wikilink()                                  *notes.follow_wikilink(
     Follow the wiki-link under the cursor. Creates the target note if it
     doesn't exist. Returns `true` if a link was followed, `false` otherwise.
 
+notes.follow_citation()                                  *notes.follow_citation()*
+    Follow the citation under the cursor. Opens the configured bib file
+    and jumps to the entry. Returns `true` if a citation was followed,
+    `false` otherwise.
+
+notes.follow_link()                                          *notes.follow_link()*
+    Follow either a wiki-link or citation under the cursor. This is the
+    function called by the default `follow` mapping. Returns `true` if
+    something was followed, `false` otherwise.
+
 notes.go_back()                                                *notes.go_back()*
     Navigate back to the previous note in the navigation stack.
     Returns `true` if navigation occurred, `false` if stack is empty.
@@ -185,6 +228,13 @@ notes.apply_mappings({buf})                              *notes.apply_mappings()
     Parameters: ~
         {buf} (number|nil) Buffer number (defaults to current buffer)
 
+notes.apply_back_mapping({buf})                      *notes.apply_back_mapping()*
+    Apply only the back mapping to a buffer. Called automatically for BibTeX
+    files to enable back navigation after following citations.
+
+    Parameters: ~
+        {buf} (number|nil) Buffer number (defaults to current buffer)
+
 ==============================================================================
 EXAMPLES                                                      *notes-examples*
 
@@ -205,9 +255,10 @@ Using daily notes: >
   4. Press <leader>nb to see which notes link back to today
 <
 
-Custom configuration: >lua
+Custom configuration with citations: >lua
 
   require("notes").setup({
+    bib_file = vim.fn.expand("~/Dropbox/papers.bib"),
     mappings = {
       follow = "<leader><CR>",    -- Use leader+Enter instead
       back = "<leader>bp",        -- Custom back mapping

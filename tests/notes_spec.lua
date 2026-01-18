@@ -123,6 +123,31 @@ describe("notes.nvim", function()
 		end)
 	end)
 
+	it("does not warn about missing bib_file when following wiki-links", function()
+		local notes = require("notes")
+		notes.setup({ bib_file = nil })
+		with_temp_dir({
+			{ name = "B.md", lines = { "# B" } },
+		}, function()
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("[[B]]")
+				vim.api.nvim_win_set_cursor(0, { 1, 2 })
+
+				local notices = {}
+				with_stubbed(vim, "notify", function(msg, level)
+					table.insert(notices, { msg = msg, level = level })
+				end, function()
+					local handled = notes.follow_link()
+					assert.is_true(handled)
+					assert.equals("B.md", vim.fn.expand("%:t"))
+				end)
+
+				assert.equals(0, #notices)
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+		end)
+	end)
+
 	it("creates missing notes when following wiki-links", function()
 		local notes = require("notes")
 		with_temp_dir({}, function(tmp_dir)
@@ -314,7 +339,7 @@ describe("notes.nvim", function()
 				return false
 			end
 
-			assert.is_true(has_mapping("Follow wiki-link", "gF"))
+			assert.is_true(has_mapping("Follow wiki-link or citation", "gF"))
 			assert.is_true(has_mapping("Notes back", "gB"))
 			assert.is_false(has_mapping("Notes backlinks", "<leader>nb"))
 		end)
@@ -577,12 +602,12 @@ describe("notes.nvim", function()
 
 	it("handles navigation stack with many jumps", function()
 		local notes = require("notes")
-		
+
 		-- Clear any existing navigation history by going back until empty
 		while notes.go_back() do
 			-- Keep going back
 		end
-		
+
 		with_temp_dir({}, function(tmp_dir)
 			-- Create 20 notes
 			for i = 1, 20 do

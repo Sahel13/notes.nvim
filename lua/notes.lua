@@ -2,12 +2,14 @@
 local notes = {}
 local fs = require("notes.fs")
 local wikilink = require("notes.wikilink")
+local citation = require("notes.citation")
 local date = require("notes.date")
 -- Use blink kinds when available; fall back for headless tests.
 local ok_types, blink_types = pcall(require, "blink.cmp.types")
 local completion_kinds = ok_types and blink_types.CompletionItemKind or vim.lsp.protocol.CompletionItemKind
 local nav_stack = {}
 local config = {
+	bib_file = nil,
 	mappings = {
 		follow = "<CR>",
 		back = "<BS>",
@@ -40,15 +42,77 @@ function notes:enabled()
 	return vim.bo.filetype == "markdown"
 end
 
--- Trigger completion when typing a bracket.
+-- Trigger completion when typing a bracket or @.
 function notes:get_trigger_characters()
-	return { "[" }
+	return { "[", "@" }
 end
 
--- Provide wiki-link completions from Markdown files in :pwd.
+-- Provide wiki-link and citation completions.
 function notes:get_completions(_, callback)
-	local range = wikilink.wikilink_range()
-	if not range then
+	-- Try citation completion first
+	local citation_range = citation.citation_range()
+	if citation_range and config.bib_file then
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local line = vim.api.nvim_get_current_line()
+		local suffix = citation.closing_suffix(line, cursor[2])
+
+		-- Expand path to handle ~
+		local bib_file = vim.fn.expand(config.bib_file)
+		local keys, err = citation.get_citation_keys(bib_file)
+		if not keys then
+			vim.notify("notes.nvim: " .. (err or "Failed to load citations"), vim.log.levels.WARN)
+			callback({
+				items = {},
+				is_incomplete_forward = false,
+				is_incomplete_backward = false,
+			})
+			return
+		end
+
+		local items = {}
+		for _, key in ipairs(keys) do
+			local metadata = citation.get_citation_metadata(bib_file, key)
+			local label_detail = nil
+			local documentation = nil
+
+			if metadata then
+				if metadata.author and metadata.year then
+					label_detail = metadata.author .. " (" .. metadata.year .. ")"
+				elseif metadata.year then
+					label_detail = "(" .. metadata.year .. ")"
+				end
+
+				if metadata.title then
+					documentation = metadata.title
+				end
+			end
+
+			table.insert(items, {
+				label = key,
+				labelDetails = label_detail and { detail = " " .. label_detail } or nil,
+				kind = completion_kinds.Reference,
+				documentation = documentation,
+				textEdit = {
+					newText = key .. suffix,
+					range = {
+						start = { line = citation_range.line, character = citation_range.start_col },
+						["end"] = { line = citation_range.line, character = citation_range.end_col },
+					},
+				},
+			})
+		end
+
+		callback({
+			items = items,
+			is_incomplete_forward = false,
+			is_incomplete_backward = false,
+		})
+		return
+	end
+
+	-- Fall back to wikilink completion
+	local wikilink_range = wikilink.wikilink_range()
+	if not wikilink_range then
 		callback({
 			items = {},
 			is_incomplete_forward = false,
@@ -72,8 +136,8 @@ function notes:get_completions(_, callback)
 			textEdit = {
 				newText = stem .. suffix,
 				range = {
-					start = { line = range.line, character = range.start_col },
-					["end"] = { line = range.line, character = range.end_col },
+					start = { line = wikilink_range.line, character = wikilink_range.start_col },
+					["end"] = { line = wikilink_range.line, character = wikilink_range.end_col },
 				},
 			},
 		})
@@ -117,6 +181,55 @@ function notes.follow_wikilink()
 	return true
 end
 
+-- Follow the citation under the cursor, opening the bib file at that entry.
+function notes.follow_citation()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	local citation_key = citation.citation_key_under_cursor()
+	if not citation_key then
+		return false
+	end
+
+	if not config.bib_file then
+		vim.notify("notes.nvim: bib_file not configured", vim.log.levels.WARN)
+		return false
+	end
+
+	-- Expand path to handle ~
+	local bib_file = vim.fn.expand(config.bib_file)
+	local metadata = citation.get_citation_metadata(bib_file, citation_key)
+	if not metadata then
+		vim.notify("notes.nvim: citation key '" .. citation_key .. "' not found in bib file", vim.log.levels.WARN)
+		return false
+	end
+
+	local current = vim.api.nvim_buf_get_name(0)
+	if current ~= "" then
+		table.insert(nav_stack, current)
+	end
+
+	vim.cmd("edit " .. vim.fn.fnameescape(bib_file))
+	vim.api.nvim_win_set_cursor(0, { metadata.line, 0 })
+	return true
+end
+
+-- Follow either a wiki-link or citation under the cursor.
+function notes.follow_link()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	-- Try citation first
+	if notes.follow_citation() then
+		return true
+	end
+
+	-- Fall back to wikilink
+	return notes.follow_wikilink()
+end
+
 -- Return to the previous note after following wiki-links.
 function notes.go_back()
 	local previous = table.remove(nav_stack)
@@ -136,11 +249,11 @@ function notes.apply_mappings(buf)
 	if mappings.follow then
 		local follow_map = mappings.follow
 		vim.keymap.set("n", follow_map, function()
-			if not notes.follow_wikilink() then
+			if not notes.follow_link() then
 				local keys = vim.api.nvim_replace_termcodes(follow_map, true, false, true)
 				vim.api.nvim_feedkeys(keys, "n", false)
 			end
-		end, { buffer = target_buf, silent = true, desc = "Follow wiki-link" })
+		end, { buffer = target_buf, silent = true, desc = "Follow wiki-link or citation" })
 	end
 
 	if mappings.back then
@@ -183,6 +296,22 @@ function notes.apply_mappings(buf)
 				vim.api.nvim_feedkeys(keys, "n", false)
 			end
 		end, { buffer = target_buf, silent = true, desc = "Jump to previous wiki-link" })
+	end
+end
+
+-- Apply back mapping only (for non-markdown buffers like bib files).
+function notes.apply_back_mapping(buf)
+	local target_buf = buf or 0
+	local mappings = config.mappings or {}
+
+	if mappings.back then
+		local back_map = mappings.back
+		vim.keymap.set("n", back_map, function()
+			if not notes.go_back() then
+				local keys = vim.api.nvim_replace_termcodes(back_map, true, false, true)
+				vim.api.nvim_feedkeys(keys, "n", false)
+			end
+		end, { buffer = target_buf, silent = true, desc = "Notes back" })
 	end
 end
 

@@ -18,7 +18,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 
 ## Installation
 
-### Pre-requisites
+### Prerequisites
 
 - [`blink.cmp`](https://github.com/Saghen/blink.cmp)
 - [`ripgrep`](https://github.com/BurntSushi/ripgrep)

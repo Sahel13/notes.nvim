@@ -8,7 +8,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 - Wiki-link completion for `[[...]]` via
 [`blink.cmp`](https://github.com/Saghen/blink.cmp), scanning Markdown files in `:pwd` (flat directory).
 - Follow `[[note]]` with Enter to open or create `note.md` in `:pwd`.
-- **Citation support** with `[@key]` syntax (Pandoc-style) and BibTeX integration.
+- Citation support with `[@key]` syntax (Pandoc-style) and BibTeX integration.
 - Citation completion from `.bib` files with author/year metadata.
 - Follow `[@key]` to jump to the entry in your bib file.
 - Back navigation stack with Backspace after following links.
@@ -54,6 +54,8 @@ Register the source in your `blink.cmp` configuration:
 
 ## Configuration
 
+The full configuration with default keybindings is given below.
+
 ```lua
 opts = {
     bib_file = "~/references.bib",  -- Optional: path to your BibTeX file
@@ -68,20 +70,4 @@ opts = {
 }
 ```
 
-Set any mapping to `false` to disable it. If you disable the backlinks mapping, you can still run `:lua require("notes").find_backlinks()`. Similarly, the daily note function is available as `:lua require("notes").open_daily_note()`.
-
-### Citation Setup
-
-To enable citation support, specify the path to your BibTeX file:
-
-```lua
-require("notes").setup({
-    bib_file = vim.fn.expand("~/documents/references.bib"),
-})
-```
-
-Then in your Markdown files:
-- Type `[@` to trigger citation completion
-- Completions show citation keys with author and year
-- Press `<CR>` on `[@key]` to open your bib file at that entry
-- Press `<BS>` from the bib file to return to your note
+Set any mapping to `false` to disable it.

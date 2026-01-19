@@ -38,6 +38,12 @@ local function with_stubbed(target, key, value, fn)
 	end
 end
 
+local function clear_nav_stack(notes)
+	while notes.go_back() do
+		-- keep going
+	end
+end
+
 describe("notes.nvim", function()
 	it("loads the module", function()
 		local notes = require("notes")
@@ -164,6 +170,93 @@ describe("notes.nvim", function()
 
 				vim.api.nvim_buf_delete(0, { force = true })
 			end)
+		end)
+	end)
+
+	it("follows wiki-links in a split", function()
+		local notes = require("notes")
+		with_temp_dir({
+			{ name = "A.md", lines = { "# A", "[[B]]" } },
+			{ name = "B.md", lines = { "# B" } },
+		}, function(tmp_dir)
+			vim.cmd("only")
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/A.md"))
+			vim.bo.filetype = "markdown"
+			vim.api.nvim_win_set_cursor(0, { 2, 2 })
+
+			local win_count_before = #vim.api.nvim_list_wins()
+			local handled = notes.follow_wikilink_split()
+			assert.is_true(handled)
+			assert.equals(win_count_before + 1, #vim.api.nvim_list_wins())
+			assert.equals("B.md", vim.fn.expand("%:t"))
+
+			vim.cmd("only")
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+			clear_nav_stack(notes)
+		end)
+	end)
+
+	it("creates missing notes when following wiki-links in a vertical split", function()
+		local notes = require("notes")
+		with_temp_dir({
+			{ name = "A.md", lines = { "# A", "[[missing]]" } },
+		}, function(tmp_dir)
+			local missing_path = tmp_dir .. "/missing.md"
+			vim.cmd("only")
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/A.md"))
+			vim.bo.filetype = "markdown"
+			vim.api.nvim_win_set_cursor(0, { 2, 3 })
+
+			local win_count_before = #vim.api.nvim_list_wins()
+			local handled = notes.follow_wikilink_vsplit()
+			assert.is_true(handled)
+			assert.equals(win_count_before + 1, #vim.api.nvim_list_wins())
+			assert.equals("missing.md", vim.fn.expand("%:t"))
+			assert.equals(1, vim.fn.filereadable(missing_path))
+
+			vim.cmd("only")
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+			clear_nav_stack(notes)
+		end)
+	end)
+
+	it("follows citations in a split", function()
+		local notes = require("notes")
+		with_temp_dir({
+			{ name = "A.md", lines = { "# A", "See [@doe2020]" } },
+			{
+				name = "refs.bib",
+				lines = {
+					"@article{doe2020,",
+					"  title = {Example},",
+					"  author = {Doe, Jane},",
+					"  year = {2020}",
+					"}",
+				},
+			},
+		}, function(tmp_dir)
+			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })
+			vim.cmd("only")
+			vim.cmd("edit " .. vim.fn.fnameescape(tmp_dir .. "/A.md"))
+			vim.bo.filetype = "markdown"
+			vim.api.nvim_win_set_cursor(0, { 2, 7 })
+
+			local win_count_before = #vim.api.nvim_list_wins()
+			local handled = notes.follow_link_split()
+			assert.is_true(handled)
+			assert.equals(win_count_before + 1, #vim.api.nvim_list_wins())
+			assert.equals("refs.bib", vim.fn.expand("%:t"))
+
+			vim.cmd("only")
+			if vim.api.nvim_buf_is_valid(0) then
+				vim.api.nvim_buf_delete(0, { force = true })
+			end
+			clear_nav_stack(notes)
+			notes.setup({ bib_file = nil })
 		end)
 	end)
 
@@ -347,8 +440,13 @@ describe("notes.nvim", function()
 		notes.setup({
 			mappings = {
 				follow = "<CR>",
+				follow_split = "<S-CR>",
+				follow_vsplit = "<C-CR>",
 				back = "<BS>",
 				backlinks = "<leader>nb",
+				daily_note = "<leader>nd",
+				next_wikilink = "<Tab>",
+				prev_wikilink = "<S-Tab>",
 			},
 		})
 	end)
@@ -567,6 +665,8 @@ describe("notes.nvim", function()
 		notes.setup({
 			mappings = {
 				follow = false,
+				follow_split = false,
+				follow_vsplit = false,
 				back = false,
 				backlinks = false,
 				daily_note = false,
@@ -591,6 +691,8 @@ describe("notes.nvim", function()
 		notes.setup({
 			mappings = {
 				follow = "<CR>",
+				follow_split = "<S-CR>",
+				follow_vsplit = "<C-CR>",
 				back = "<BS>",
 				backlinks = "<leader>nb",
 				daily_note = "<leader>nd",

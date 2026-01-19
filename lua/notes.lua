@@ -12,6 +12,8 @@ local config = {
 	bib_file = nil,
 	mappings = {
 		follow = "<CR>",
+		follow_split = "<S-CR>",
+		follow_vsplit = "<C-CR>",
 		back = "<BS>",
 		backlinks = "<leader>nb",
 		daily_note = "<leader>nd",
@@ -150,8 +152,8 @@ function notes:get_completions(_, callback)
 	})
 end
 
--- Follow the wiki-link under the cursor, opening the target note if present.
-function notes.follow_wikilink()
+-- Open the wiki-link under the cursor using the supplied command.
+local function follow_wikilink_with(cmd)
 	if vim.bo.filetype ~= "markdown" then
 		return false
 	end
@@ -177,12 +179,12 @@ function notes.follow_wikilink()
 		table.insert(nav_stack, current)
 	end
 
-	vim.cmd("edit " .. vim.fn.fnameescape(target))
+	vim.cmd(cmd .. " " .. vim.fn.fnameescape(target))
 	return true
 end
 
--- Follow the citation under the cursor, opening the bib file at that entry.
-function notes.follow_citation()
+-- Open the citation under the cursor using the supplied command.
+local function follow_citation_with(cmd)
 	if vim.bo.filetype ~= "markdown" then
 		return false
 	end
@@ -210,9 +212,39 @@ function notes.follow_citation()
 		table.insert(nav_stack, current)
 	end
 
-	vim.cmd("edit " .. vim.fn.fnameescape(bib_file))
+	vim.cmd(cmd .. " " .. vim.fn.fnameescape(bib_file))
 	vim.api.nvim_win_set_cursor(0, { metadata.line, 0 })
 	return true
+end
+
+-- Follow the wiki-link under the cursor, opening the target note if present.
+function notes.follow_wikilink()
+	return follow_wikilink_with("edit")
+end
+
+-- Follow the wiki-link under the cursor in a horizontal split.
+function notes.follow_wikilink_split()
+	return follow_wikilink_with("split")
+end
+
+-- Follow the wiki-link under the cursor in a vertical split.
+function notes.follow_wikilink_vsplit()
+	return follow_wikilink_with("vsplit")
+end
+
+-- Follow the citation under the cursor, opening the bib file at that entry.
+function notes.follow_citation()
+	return follow_citation_with("edit")
+end
+
+-- Follow the citation under the cursor in a horizontal split.
+function notes.follow_citation_split()
+	return follow_citation_with("split")
+end
+
+-- Follow the citation under the cursor in a vertical split.
+function notes.follow_citation_vsplit()
+	return follow_citation_with("vsplit")
 end
 
 -- Follow either a wiki-link or citation under the cursor.
@@ -228,6 +260,32 @@ function notes.follow_link()
 
 	-- Fall back to wikilink
 	return notes.follow_wikilink()
+end
+
+-- Follow either a wiki-link or citation in a horizontal split.
+function notes.follow_link_split()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	if notes.follow_citation_split() then
+		return true
+	end
+
+	return notes.follow_wikilink_split()
+end
+
+-- Follow either a wiki-link or citation in a vertical split.
+function notes.follow_link_vsplit()
+	if vim.bo.filetype ~= "markdown" then
+		return false
+	end
+
+	if notes.follow_citation_vsplit() then
+		return true
+	end
+
+	return notes.follow_wikilink_vsplit()
 end
 
 -- Return to the previous note after following wiki-links.
@@ -254,6 +312,26 @@ function notes.apply_mappings(buf)
 				vim.api.nvim_feedkeys(keys, "n", false)
 			end
 		end, { buffer = target_buf, silent = true, desc = "Follow wiki-link or citation" })
+	end
+
+	if mappings.follow_split then
+		local split_map = mappings.follow_split
+		vim.keymap.set("n", split_map, function()
+			if not notes.follow_link_split() then
+				local keys = vim.api.nvim_replace_termcodes(split_map, true, false, true)
+				vim.api.nvim_feedkeys(keys, "n", false)
+			end
+		end, { buffer = target_buf, silent = true, desc = "Split and follow link" })
+	end
+
+	if mappings.follow_vsplit then
+		local vsplit_map = mappings.follow_vsplit
+		vim.keymap.set("n", vsplit_map, function()
+			if not notes.follow_link_vsplit() then
+				local keys = vim.api.nvim_replace_termcodes(vsplit_map, true, false, true)
+				vim.api.nvim_feedkeys(keys, "n", false)
+			end
+		end, { buffer = target_buf, silent = true, desc = "Vertical split and follow link" })
 	end
 
 	if mappings.back then

@@ -8,6 +8,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 - Wiki-link completion for `[[...]]` via
 [`blink.cmp`](https://github.com/Saghen/blink.cmp), scanning Markdown files in `:pwd` (flat directory).
 - Follow `[[note]]` with Enter to open or create `note.md` in `:pwd`.
+- Open wiki-links or citations in a split (Shift+Enter) or vertical split (Ctrl+Enter).
 - Citation support with `[@key]` syntax (Pandoc-style) and BibTeX integration.
 - Citation completion from `.bib` files with author/year metadata.
 - Follow `[@key]` to jump to the entry in your bib file.
@@ -61,6 +62,8 @@ opts = {
     bib_file = "~/references.bib",  -- Optional: path to your BibTeX file
     mappings = {
         follow = "<CR>",
+        follow_split = "<S-CR>", -- Split and follow wiki-link or citation
+        follow_vsplit = "<C-CR>", -- Vertical split and follow wiki-link or citation
         back = "<BS>",
         next_wikilink = "<Tab>",
         prev_wikilink = "<S-Tab>",

@@ -21,6 +21,7 @@ providing core vimwiki-style features for Neovim.
 Features:
   - Wiki-link completion via blink.cmp
   - Follow [[links]] to open or create notes
+  - Split or vertical split links to open in new windows
   - Citation support with [@key] syntax (Pandoc-style)
   - Citation completion from BibTeX files
   - Follow citations to jump to bib entries
@@ -78,6 +79,8 @@ Call `setup()` to configure the plugin: >lua
     bib_file = "~/references.bib",  -- Path to your BibTeX file (optional)
     mappings = {
       follow = "<CR>",           -- Follow wiki-link or citation under cursor
+      follow_split = "<S-CR>",   -- Split and follow wiki-link or citation
+      follow_vsplit = "<C-CR>",  -- Vertical split and follow wiki-link or citation
       back = "<BS>",             -- Navigate back in link history
       next_wikilink = "<Tab>",   -- Jump to next wiki-link
       prev_wikilink = "<S-Tab>", -- Jump to previous wiki-link
@@ -145,6 +148,10 @@ with the cursor positioned at that entry.
 
 New notes are created in `:pwd` with the `.md` extension.
 
+To open links in new windows:
+  - `<S-CR>` - Open in a horizontal split
+  - `<C-CR>` - Open in a vertical split
+
 ------------------------------------------------------------------------------
 BACK NAVIGATION                                                   *notes-back*
 
@@ -191,15 +198,43 @@ notes.follow_wikilink()                                  *notes.follow_wikilink(
     Follow the wiki-link under the cursor. Creates the target note if it
     doesn't exist. Returns `true` if a link was followed, `false` otherwise.
 
+notes.follow_wikilink_split()                      *notes.follow_wikilink_split()*
+    Follow the wiki-link under the cursor in a horizontal split. Creates the
+    target note if it doesn't exist. Returns `true` if a link was followed,
+    `false` otherwise.
+
+notes.follow_wikilink_vsplit()                    *notes.follow_wikilink_vsplit()*
+    Follow the wiki-link under the cursor in a vertical split. Creates the
+    target note if it doesn't exist. Returns `true` if a link was followed,
+    `false` otherwise.
+
 notes.follow_citation()                                  *notes.follow_citation()*
     Follow the citation under the cursor. Opens the configured bib file
     and jumps to the entry. Returns `true` if a citation was followed,
     `false` otherwise.
 
+notes.follow_citation_split()                      *notes.follow_citation_split()*
+    Follow the citation under the cursor in a horizontal split. Opens the
+    configured bib file and jumps to the entry. Returns `true` if a
+    citation was followed, `false` otherwise.
+
+notes.follow_citation_vsplit()                    *notes.follow_citation_vsplit()*
+    Follow the citation under the cursor in a vertical split. Opens the
+    configured bib file and jumps to the entry. Returns `true` if a
+    citation was followed, `false` otherwise.
+
 notes.follow_link()                                          *notes.follow_link()*
     Follow either a wiki-link or citation under the cursor. This is the
     function called by the default `follow` mapping. Returns `true` if
     something was followed, `false` otherwise.
+
+notes.follow_link_split()                            *notes.follow_link_split()*
+    Follow either a wiki-link or citation in a horizontal split. Returns
+    `true` if something was followed, `false` otherwise.
+
+notes.follow_link_vsplit()                          *notes.follow_link_vsplit()*
+    Follow either a wiki-link or citation in a vertical split. Returns
+    `true` if something was followed, `false` otherwise.
 
 notes.go_back()                                                *notes.go_back()*
     Navigate back to the previous note in the navigation stack.

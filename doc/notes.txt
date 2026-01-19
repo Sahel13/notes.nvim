@@ -149,6 +149,8 @@ picker with a bib entry preview; otherwise it falls back to `vim.ui.select`.
 
 The note is created in `:pwd` with the filename `{citation_key}.md` and
 includes YAML frontmatter containing the title, authors list, and year.
+BibTeX title braces used for capitalization are stripped from the frontmatter
+title, and common LaTeX accent commands are stripped to ASCII.
 Existing reference notes are not overwritten.
 
 ------------------------------------------------------------------------------

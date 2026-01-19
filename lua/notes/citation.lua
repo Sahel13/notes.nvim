@@ -112,6 +112,45 @@ function M.parse_bib_entry(line)
 	return nil
 end
 
+-- Extract a BibTeX field value from a single line.
+local function extract_field_value(line, field)
+	local _, value_start, delimiter = line:find("^%s*" .. field .. '%s*=%s*([{"])')
+	if not value_start or not delimiter then
+		return nil
+	end
+
+	local start_idx = value_start + 1
+	if delimiter == "{" then
+		local depth = 1
+		for i = start_idx, #line do
+			local ch = line:sub(i, i)
+			if ch == "{" then
+				depth = depth + 1
+			elseif ch == "}" then
+				depth = depth - 1
+				if depth == 0 then
+					return line:sub(start_idx, i - 1)
+				end
+			end
+		end
+		return nil
+	end
+
+	local i = start_idx
+	while i <= #line do
+		local ch = line:sub(i, i)
+		if ch == "\\" then
+			i = i + 2
+		elseif ch == '"' then
+			return line:sub(start_idx, i - 1)
+		else
+			i = i + 1
+		end
+	end
+
+	return nil
+end
+
 -- Parse a .bib file and return a table of {key -> line_number}.
 -- Also returns entry metadata for completions.
 function M.parse_bib_file(file_path)
@@ -156,17 +195,17 @@ function M.parse_bib_file(file_path)
 			}
 		elseif current_key then
 			-- Extract metadata fields
-			local title = line:match('%s*title%s*=%s*[{"](.-)[}"]')
+			local title = extract_field_value(line, "title")
 			if title then
 				entries[current_key].title = title
 			end
 
-			local author = line:match('%s*author%s*=%s*[{"](.-)[}"]')
+			local author = extract_field_value(line, "author")
 			if author then
 				entries[current_key].author = author
 			end
 
-			local year = line:match('%s*year%s*=%s*[{"](.-)[}"]')
+			local year = extract_field_value(line, "year")
 			if year then
 				entries[current_key].year = year
 			end

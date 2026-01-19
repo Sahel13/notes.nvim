@@ -392,6 +392,54 @@ local function yaml_escape(value)
 	return value:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n")
 end
 
+local latex_command_map = {
+	["\\ae"] = "ae",
+	["\\AE"] = "AE",
+	["\\oe"] = "oe",
+	["\\OE"] = "OE",
+	["\\aa"] = "aa",
+	["\\AA"] = "AA",
+	["\\o"] = "o",
+	["\\O"] = "O",
+	["\\ss"] = "ss",
+	["\\l"] = "l",
+	["\\L"] = "L",
+	["\\i"] = "i",
+	["\\j"] = "j",
+}
+
+-- Convert common LaTeX accents/commands to ASCII equivalents.
+local function latex_to_ascii(value)
+	if not value then
+		return value
+	end
+
+	local result = value
+	result = result:gsub("\\([\"'`^~=%.uvHckr])%s*{(%a)}", "%2")
+	result = result:gsub("\\([\"'`^~=%.uvHckr])(%a)", "%2")
+	for latex, replacement in pairs(latex_command_map) do
+		result = result:gsub(latex, replacement)
+	end
+
+	return result
+end
+
+-- Strip BibTeX title braces used for capitalization.
+local function strip_bibtex_braces(value)
+	if not value then
+		return value
+	end
+	return value:gsub("[{}]", "")
+end
+
+-- Normalize BibTeX values for frontmatter.
+local function normalize_bibtex_value(value)
+	if not value then
+		return value
+	end
+	return strip_bibtex_braces(latex_to_ascii(value))
+end
+
 -- Split a BibTeX author field into a list of names.
 local function parse_authors(author_field)
 	if not author_field or author_field == "" then
@@ -411,7 +459,7 @@ end
 
 -- Build YAML frontmatter for a reference note.
 local function reference_frontmatter_lines(citation_key, metadata)
-	local title = metadata.title or citation_key
+	local title = normalize_bibtex_value(metadata.title or citation_key)
 	local authors = parse_authors(metadata.author)
 	local year = metadata.year or ""
 
@@ -420,7 +468,8 @@ local function reference_frontmatter_lines(citation_key, metadata)
 	if #authors > 0 then
 		table.insert(lines, "authors:")
 		for _, author in ipairs(authors) do
-			table.insert(lines, '  - "' .. yaml_escape(author) .. '"')
+			local normalized_author = normalize_bibtex_value(author)
+			table.insert(lines, '  - "' .. yaml_escape(normalized_author) .. '"')
 		end
 	else
 		table.insert(lines, "authors: []")

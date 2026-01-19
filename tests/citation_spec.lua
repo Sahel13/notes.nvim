@@ -107,6 +107,40 @@ describe("notes.citation", function()
 			assert.equals("2020", entries.key1.year)
 		end)
 
+		it("parses titles with nested braces", function()
+			local content = [[
+@article{key1,
+  title = {User-friendly introduction to {PAC-Bayes} bounds},
+  author = {Jane Doe},
+  year = {2022}
+}
+]]
+			local file = io.open(temp_file, "w")
+			file:write(content)
+			file:close()
+
+			local entries = citation.parse_bib_file(temp_file)
+			assert.is_not_nil(entries)
+			assert.equals("User-friendly introduction to {PAC-Bayes} bounds", entries.key1.title)
+		end)
+
+		it("does not treat booktitle as title", function()
+			local content = [[
+@inproceedings{key1,
+  title = {Actual Title},
+  booktitle = {Conference Name},
+  year = {2012}
+}
+]]
+			local file = io.open(temp_file, "w")
+			file:write(content)
+			file:close()
+
+			local entries = citation.parse_bib_file(temp_file)
+			assert.is_not_nil(entries)
+			assert.equals("Actual Title", entries.key1.title)
+		end)
+
 		it("handles entries without metadata", function()
 			local content = [[
 @article{key1,

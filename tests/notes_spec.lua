@@ -583,6 +583,87 @@ describe("notes.nvim", function()
 		end)
 	end)
 
+	it("strips BibTeX title braces in reference note frontmatter", function()
+		local notes = require("notes")
+
+		with_temp_dir({
+			{
+				name = "refs.bib",
+				lines = {
+					"@article{doe2020,",
+					"  title = {User-friendly introduction to {PAC-Bayes} bounds},",
+					"  author = {Doe, Jane},",
+					"  year = {2020}",
+					"}",
+				},
+			},
+		}, function(tmp_dir)
+			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })
+
+			with_markdown_buf(function()
+				local handled = notes.open_reference_note_for_key("doe2020")
+				assert.is_true(handled)
+
+				local note_path = tmp_dir .. "/doe2020.md"
+				assert.equals(1, vim.fn.filereadable(note_path))
+				assert.same({
+					"---",
+					'title: "User-friendly introduction to PAC-Bayes bounds"',
+					"authors:",
+					'  - "Doe, Jane"',
+					'year: "2020"',
+					"---",
+					"",
+				}, vim.fn.readfile(note_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			notes.setup({ bib_file = nil })
+		end)
+	end)
+
+	it("uses title field and strips LaTeX accents in reference notes", function()
+		local notes = require("notes")
+
+		with_temp_dir({
+			{
+				name = "refs.bib",
+				lines = {
+					"@inproceedings{grunwald2012safe,",
+					'  author = {Peter Gr{\\"u}nwald},',
+					"  title = {The safe {Bayesian}: {Learning} the learning rate via the mixability gap},",
+					"  booktitle = {International Conference on Algorithmic Learning Theory},",
+					"  year = {2012},",
+					"}",
+				},
+			},
+		}, function(tmp_dir)
+			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })
+
+			with_markdown_buf(function()
+				local handled = notes.open_reference_note_for_key("grunwald2012safe")
+				assert.is_true(handled)
+
+				local note_path = tmp_dir .. "/grunwald2012safe.md"
+				assert.equals(1, vim.fn.filereadable(note_path))
+				assert.same({
+					"---",
+					'title: "The safe Bayesian: Learning the learning rate via the mixability gap"',
+					"authors:",
+					'  - "Peter Grunwald"',
+					'year: "2012"',
+					"---",
+					"",
+				}, vim.fn.readfile(note_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			notes.setup({ bib_file = nil })
+		end)
+	end)
+
 	it("does not overwrite existing reference notes", function()
 		local notes = require("notes")
 

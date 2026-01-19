@@ -445,6 +445,7 @@ describe("notes.nvim", function()
 				back = "<BS>",
 				backlinks = "<leader>nb",
 				daily_note = "<leader>nd",
+				reference_note = "<leader>nr",
 				next_wikilink = "<Tab>",
 				prev_wikilink = "<S-Tab>",
 			},
@@ -538,6 +539,79 @@ describe("notes.nvim", function()
 			-- Restore original functions
 			date.daily_filename = original_daily_filename
 			date.daily_title = original_daily_title
+		end)
+	end)
+
+	it("creates reference note with frontmatter from bib metadata", function()
+		local notes = require("notes")
+
+		with_temp_dir({
+			{
+				name = "refs.bib",
+				lines = {
+					"@article{doe2020,",
+					"  title = {Example Paper},",
+					"  author = {Doe, Jane and Smith, John},",
+					"  year = {2020}",
+					"}",
+				},
+			},
+		}, function(tmp_dir)
+			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })
+
+			with_markdown_buf(function()
+				local handled = notes.open_reference_note_for_key("doe2020")
+				assert.is_true(handled)
+
+				local note_path = tmp_dir .. "/doe2020.md"
+				assert.equals(1, vim.fn.filereadable(note_path))
+				assert.same({
+					"---",
+					'title: "Example Paper"',
+					"authors:",
+					'  - "Doe, Jane"',
+					'  - "Smith, John"',
+					'year: "2020"',
+					"---",
+					"",
+				}, vim.fn.readfile(note_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			notes.setup({ bib_file = nil })
+		end)
+	end)
+
+	it("does not overwrite existing reference notes", function()
+		local notes = require("notes")
+
+		with_temp_dir({
+			{
+				name = "refs.bib",
+				lines = {
+					"@article{doe2020,",
+					"  title = {Example Paper},",
+					"  author = {Doe, Jane and Smith, John},",
+					"  year = {2020}",
+					"}",
+				},
+			},
+		}, function(tmp_dir)
+			local note_path = tmp_dir .. "/doe2020.md"
+			vim.fn.writefile({ "Existing content" }, note_path)
+
+			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })
+
+			with_markdown_buf(function()
+				local handled = notes.open_reference_note_for_key("doe2020")
+				assert.is_true(handled)
+				assert.same({ "Existing content" }, vim.fn.readfile(note_path))
+
+				vim.api.nvim_buf_delete(0, { force = true })
+			end)
+
+			notes.setup({ bib_file = nil })
 		end)
 	end)
 
@@ -670,6 +744,7 @@ describe("notes.nvim", function()
 				back = false,
 				backlinks = false,
 				daily_note = false,
+				reference_note = false,
 				next_wikilink = false,
 				prev_wikilink = false,
 			},
@@ -696,6 +771,7 @@ describe("notes.nvim", function()
 				back = "<BS>",
 				backlinks = "<leader>nb",
 				daily_note = "<leader>nd",
+				reference_note = "<leader>nr",
 				next_wikilink = "<Tab>",
 				prev_wikilink = "<S-Tab>",
 			},

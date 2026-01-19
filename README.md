@@ -12,6 +12,7 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 - Citation support with `[@key]` syntax (Pandoc-style) and BibTeX integration.
 - Citation completion from `.bib` files with author/year metadata.
 - Follow `[@key]` to jump to the entry in your bib file.
+- Create reference notes from BibTeX entries (Telescope picker with bib preview, `vim.ui.select` fallback).
 - Back navigation stack with Backspace after following links.
 - Navigate between wiki-links with Tab (next) and Shift+Tab (previous).
 - Backlinks search into the quickfix list using [`ripgrep`](https://github.com/BurntSushi/ripgrep).
@@ -69,6 +70,7 @@ opts = {
         prev_wikilink = "<S-Tab>",
         backlinks = "<leader>nb",
         daily_note = "<leader>nd",
+        reference_note = "<leader>nr",
     },
 }
 ```

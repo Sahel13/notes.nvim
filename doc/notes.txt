@@ -25,6 +25,7 @@ Features:
   - Citation support with [@key] syntax (Pandoc-style)
   - Citation completion from BibTeX files
   - Follow citations to jump to bib entries
+  - Create reference notes from BibTeX entries
   - Back navigation after following links
   - Navigate between wiki-links with Tab/Shift-Tab
   - Find backlinks using ripgrep
@@ -86,6 +87,7 @@ Call `setup()` to configure the plugin: >lua
       prev_wikilink = "<S-Tab>", -- Jump to previous wiki-link
       backlinks = "<leader>nb",  -- Find backlinks to current note
       daily_note = "<leader>nd", -- Open today's daily note
+      reference_note = "<leader>nr", -- Open reference note from BibTeX
     },
   })
 <
@@ -137,6 +139,17 @@ Example workflow: >
   " Press <CR> on [@lindley1956measure] to view the bib entry
   " Type [@ to see completions of all available citations
 <
+
+------------------------------------------------------------------------------
+REFERENCE NOTES                                           *notes-reference*
+
+Press `<leader>nr` (or your configured mapping) to select a citation key and
+open a reference note for it. If Telescope is installed, notes.nvim uses a
+picker with a bib entry preview; otherwise it falls back to `vim.ui.select`.
+
+The note is created in `:pwd` with the filename `{citation_key}.md` and
+includes YAML frontmatter containing the title, authors list, and year.
+Existing reference notes are not overwritten.
 
 ------------------------------------------------------------------------------
 FOLLOWING LINKS                                                 *notes-follow*
@@ -246,6 +259,15 @@ notes.find_backlinks()                                    *notes.find_backlinks(
 
 notes.open_daily_note()                                  *notes.open_daily_note()*
     Open or create today's daily note with filename format `YYYY-MM-DD.md`.
+    Returns `true` on success, `false` on error.
+
+notes.open_reference_note()                        *notes.open_reference_note()*
+    Select a citation key from the configured bib file and open or create a
+    reference note with YAML frontmatter. Returns `true` on success, `false`
+    on error.
+
+notes.open_reference_note_for_key()    *notes.open_reference_note_for_key()*
+    Open or create a reference note for the given citation key.
     Returns `true` on success, `false` on error.
 
 notes.jump_to_next_wikilink()                      *notes.jump_to_next_wikilink()*

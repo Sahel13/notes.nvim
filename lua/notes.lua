@@ -17,6 +17,7 @@ local config = {
 		back = "<BS>",
 		backlinks = "<leader>nb",
 		daily_note = "<leader>nd",
+		reference_note = "<leader>nr",
 		next_wikilink = "<Tab>",
 		prev_wikilink = "<S-Tab>",
 	},
@@ -356,6 +357,12 @@ function notes.apply_mappings(buf)
 		end, { buffer = target_buf, silent = true, desc = "Open daily note" })
 	end
 
+	if mappings.reference_note then
+		vim.keymap.set("n", mappings.reference_note, function()
+			notes.open_reference_note()
+		end, { buffer = target_buf, silent = true, desc = "Open reference note" })
+	end
+
 	if mappings.next_wikilink then
 		local next_map = mappings.next_wikilink
 		vim.keymap.set("n", next_map, function()
@@ -375,6 +382,232 @@ function notes.apply_mappings(buf)
 			end
 		end, { buffer = target_buf, silent = true, desc = "Jump to previous wiki-link" })
 	end
+end
+
+local function trim(value)
+	return (value:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+local function yaml_escape(value)
+	return value:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n")
+end
+
+-- Split a BibTeX author field into a list of names.
+local function parse_authors(author_field)
+	if not author_field or author_field == "" then
+		return {}
+	end
+
+	local authors = {}
+	for _, author in ipairs(vim.split(author_field, " and ", { plain = true, trimempty = true })) do
+		local cleaned = trim(author)
+		if cleaned ~= "" then
+			table.insert(authors, cleaned)
+		end
+	end
+
+	return authors
+end
+
+-- Build YAML frontmatter for a reference note.
+local function reference_frontmatter_lines(citation_key, metadata)
+	local title = metadata.title or citation_key
+	local authors = parse_authors(metadata.author)
+	local year = metadata.year or ""
+
+	local lines = { "---" }
+	table.insert(lines, 'title: "' .. yaml_escape(title) .. '"')
+	if #authors > 0 then
+		table.insert(lines, "authors:")
+		for _, author in ipairs(authors) do
+			table.insert(lines, '  - "' .. yaml_escape(author) .. '"')
+		end
+	else
+		table.insert(lines, "authors: []")
+	end
+	table.insert(lines, 'year: "' .. yaml_escape(year) .. '"')
+	table.insert(lines, "---")
+	table.insert(lines, "")
+
+	return lines
+end
+
+local function open_reference_note_for_entry(citation_key, metadata)
+	local cwd = vim.fn.getcwd()
+	local target = cwd .. "/" .. citation_key .. ".md"
+
+	if vim.fn.filereadable(target) == 0 then
+		local lines = reference_frontmatter_lines(citation_key, metadata)
+		local ok = pcall(vim.fn.writefile, lines, target)
+		if not ok then
+			vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
+			return false
+		end
+	end
+
+	local current = vim.api.nvim_buf_get_name(0)
+	if current ~= "" then
+		table.insert(nav_stack, current)
+	end
+
+	vim.cmd("edit " .. vim.fn.fnameescape(target))
+	return true
+end
+
+-- Open or create a reference note for the given citation key.
+function notes.open_reference_note_for_key(citation_key)
+	if not citation_key or citation_key == "" then
+		return false
+	end
+
+	if not config.bib_file then
+		vim.notify("notes.nvim: bib_file not configured", vim.log.levels.WARN)
+		return false
+	end
+
+	local bib_file = vim.fn.expand(config.bib_file)
+	local metadata = citation.get_citation_metadata(bib_file, citation_key)
+	if not metadata then
+		vim.notify("notes.nvim: citation key '" .. citation_key .. "' not found in bib file", vim.log.levels.WARN)
+		return false
+	end
+
+	return open_reference_note_for_entry(citation_key, metadata)
+end
+
+local function build_reference_items(entries)
+	local keys = {}
+	for key, _ in pairs(entries) do
+		table.insert(keys, key)
+	end
+	table.sort(keys)
+
+	local items = {}
+	for _, key in ipairs(keys) do
+		local entry = entries[key] or {}
+		table.insert(items, {
+			key = key,
+			line = entry.line,
+			title = entry.title,
+			author = entry.author,
+			year = entry.year,
+			display = key,
+			ordinal = table.concat({ key, entry.title or "", entry.author or "", entry.year or "" }, " "),
+		})
+	end
+
+	return items
+end
+
+-- Select a citation key and open/create its reference note.
+function notes.open_reference_note()
+	if not config.bib_file then
+		vim.notify("notes.nvim: bib_file not configured", vim.log.levels.WARN)
+		return false
+	end
+
+	local bib_file = vim.fn.expand(config.bib_file)
+	local entries, err = citation.parse_bib_file(bib_file)
+	if not entries then
+		vim.notify("notes.nvim: " .. (err or "Failed to load citations"), vim.log.levels.WARN)
+		return false
+	end
+
+	local items = build_reference_items(entries)
+	if #items == 0 then
+		vim.notify("notes.nvim: no citations found in bib file", vim.log.levels.WARN)
+		return false
+	end
+
+	local ok_telescope, _ = pcall(require, "telescope")
+	if ok_telescope then
+		local pickers = require("telescope.pickers")
+		local finders = require("telescope.finders")
+		local previewers = require("telescope.previewers")
+		local previewers_utils = require("telescope.previewers.utils")
+		local conf = require("telescope.config").values
+		local actions = require("telescope.actions")
+		local action_state = require("telescope.actions.state")
+
+		pickers
+			.new({}, {
+				prompt_title = "Reference Notes",
+				finder = finders.new_table({
+					results = items,
+					entry_maker = function(item)
+						return {
+							value = item,
+							display = item.display,
+							ordinal = item.ordinal,
+						}
+					end,
+				}),
+				sorter = conf.generic_sorter({}),
+				previewer = previewers.new_buffer_previewer({
+					title = "BibTeX",
+					define_preview = function(self, entry)
+						local ok, lines = pcall(vim.fn.readfile, bib_file)
+						if not ok then
+							lines = { "" }
+						elseif #lines == 0 then
+							lines = { "" }
+						end
+						vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+						vim.bo[self.state.bufnr].filetype = "bib"
+						previewers_utils.highlighter(self.state.bufnr, "bib")
+
+						pcall(vim.api.nvim_win_set_buf, self.state.winid, self.state.bufnr)
+						local line_count = vim.api.nvim_buf_line_count(self.state.bufnr)
+						if line_count < 1 then
+							vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "" })
+							line_count = 1
+						end
+
+						local line = 1
+						if entry and entry.value and entry.value.line then
+							if entry.value.line >= 1 and entry.value.line <= line_count then
+								line = entry.value.line
+								vim.api.nvim_buf_add_highlight(self.state.bufnr, -1, "Visual", line - 1, 0, -1)
+							end
+						end
+
+						if line < 1 then
+							line = 1
+						elseif line > line_count then
+							line = line_count
+						end
+
+						pcall(vim.api.nvim_win_set_cursor, self.state.winid, { line, 0 })
+					end,
+				}),
+				attach_mappings = function(prompt_bufnr)
+					actions.select_default:replace(function()
+						actions.close(prompt_bufnr)
+						local selection = action_state.get_selected_entry()
+						if selection and selection.value then
+							notes.open_reference_note_for_key(selection.value.key)
+						end
+					end)
+					return true
+				end,
+			})
+			:find()
+
+		return true
+	end
+
+	vim.ui.select(items, {
+		prompt = "Reference Notes",
+		format_item = function(item)
+			return item.display
+		end,
+	}, function(choice)
+		if choice then
+			notes.open_reference_note_for_key(choice.key)
+		end
+	end)
+
+	return true
 end
 
 -- Apply back mapping only (for non-markdown buffers like bib files).

@@ -8,6 +8,7 @@ local date = require("notes.date")
 local ok_types, blink_types = pcall(require, "blink.cmp.types")
 local completion_kinds = ok_types and blink_types.CompletionItemKind or vim.lsp.protocol.CompletionItemKind
 local nav_stack = {}
+local preview_highlight_ns = vim.api.nvim_create_namespace("notes.nvim-preview-highlight")
 local config = {
 	bib_file = nil,
 	mappings = {
@@ -616,7 +617,17 @@ function notes.open_reference_note()
 						if entry and entry.value and entry.value.line then
 							if entry.value.line >= 1 and entry.value.line <= line_count then
 								line = entry.value.line
-								vim.api.nvim_buf_add_highlight(self.state.bufnr, -1, "Visual", line - 1, 0, -1)
+								local line_text = vim.api.nvim_buf_get_lines(self.state.bufnr, line - 1, line, false)[1]
+									or ""
+								vim.api.nvim_buf_clear_namespace(self.state.bufnr, preview_highlight_ns, 0, -1)
+								vim.hl.range(
+									self.state.bufnr,
+									preview_highlight_ns,
+									"Visual",
+									{ line - 1, 0 },
+									{ line - 1, #line_text },
+									{ inclusive = false }
+								)
 							end
 						end
 

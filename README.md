@@ -6,13 +6,15 @@ emulating a few core [vimwiki](https://github.com/vimwiki/vimwiki) features.
 ## Features
 
 - Wiki-link completion for `[[...]]` via
-[`blink.cmp`](https://github.com/Saghen/blink.cmp), scanning Markdown files in `:pwd` (flat directory).
+[`blink.cmp`](https://github.com/Saghen/blink.cmp), scanning Markdown files in `:pwd`
+and `:pwd/references`.
 - Follow `[[note]]` with Enter to open or create `note.md` in `:pwd`.
 - Open wiki-links or citations in a split (Shift+Enter) or vertical split (Ctrl+Enter).
 - Citation support with `[@key]` syntax (Pandoc-style) and BibTeX integration.
 - Citation completion from `.bib` files with author/year metadata.
 - Follow `[@key]` to jump to the entry in your bib file.
-- Create reference notes from BibTeX entries (Telescope picker with bib preview, `vim.ui.select` fallback).
+- Create reference notes from BibTeX entries in `:pwd/references` (Telescope picker with bib preview,
+`vim.ui.select` fallback).
 - Back navigation stack with Backspace after following links.
 - Navigate between wiki-links with Tab (next) and Shift+Tab (previous).
 - Backlinks search into the quickfix list using [`ripgrep`](https://github.com/BurntSushi/ripgrep).

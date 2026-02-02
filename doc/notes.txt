@@ -32,7 +32,8 @@ Features:
   - Daily notes with date-based filenames
 
 Notes are stored as Markdown files in your current working directory (`:pwd`).
-The plugin works with flat directory structures only.
+Reference notes are stored in `:pwd/references`, and wiki-link completion
+includes that subdirectory.
 
 ==============================================================================
 REQUIREMENTS                                              *notes-requirements*
@@ -109,7 +110,8 @@ FEATURES                                                      *notes-features*
 WIKI-LINK COMPLETION                                        *notes-completion*
 
 Type `[[` in a Markdown file to trigger completion of existing note names.
-Completions are provided by blink.cmp and scan all `.md` files in `:pwd`.
+Completions are provided by blink.cmp and scan `.md` files in `:pwd` and
+`:pwd/references`.
 
 The completion automatically adds the closing `]]` when needed.
 
@@ -147,8 +149,9 @@ Press `<leader>nr` (or your configured mapping) to select a citation key and
 open a reference note for it. If Telescope is installed, notes.nvim uses a
 picker with a bib entry preview; otherwise it falls back to `vim.ui.select`.
 
-The note is created in `:pwd` with the filename `{citation_key}.md` and
+The note is created in `:pwd/references` with the filename `{citation_key}.md` and
 includes YAML frontmatter containing the title, authors list, and year.
+The `references` directory is created automatically if it does not exist.
 BibTeX title braces used for capitalization are stripped from the frontmatter
 title, and common LaTeX accent commands are stripped to ASCII.
 Existing reference notes are not overwritten.
@@ -158,7 +161,8 @@ FOLLOWING LINKS                                                 *notes-follow*
 
 Press `<CR>` (or your configured mapping) on a `[[wiki-link]]` or `[@citation]`
 to open the target. For wiki-links, if the note doesn't exist, it will be
-created with a title heading. For citations, the configured bib file is opened
+created with a title heading. If a matching reference note exists in
+`:pwd/references`, it is opened instead. For citations, the configured bib file is opened
 with the cursor positioned at that entry.
 
 New notes are created in `:pwd` with the `.md` extension.

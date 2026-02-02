@@ -89,6 +89,37 @@ describe("notes.nvim", function()
 		end)
 	end)
 
+	it("includes reference notes in wiki-link completions", function()
+		local notes = require("notes")
+		local source = notes.new()
+		with_temp_dir({
+			{ name = "alpha.md", lines = { "# alpha" } },
+		}, function(tmp_dir)
+			vim.fn.mkdir(tmp_dir .. "/references", "p")
+			vim.fn.writefile({ "# ref" }, tmp_dir .. "/references/refnote.md")
+
+			with_markdown_buf(function()
+				vim.api.nvim_set_current_line("[[ref")
+				vim.api.nvim_win_set_cursor(0, { 1, 4 })
+
+				local result
+				source:get_completions({}, function(res)
+					result = res
+				end)
+
+				assert.is_table(result)
+				local found = false
+				for _, item in ipairs(result.items or {}) do
+					if item.label == "refnote" then
+						found = true
+						break
+					end
+				end
+				assert.is_true(found)
+			end)
+		end)
+	end)
+
 	it("does not offer completions when cursor is outside wiki-link bounds", function()
 		local notes = require("notes")
 		local source = notes.new()
@@ -563,7 +594,7 @@ describe("notes.nvim", function()
 				local handled = notes.open_reference_note_for_key("doe2020")
 				assert.is_true(handled)
 
-				local note_path = tmp_dir .. "/doe2020.md"
+				local note_path = tmp_dir .. "/references/doe2020.md"
 				assert.equals(1, vim.fn.filereadable(note_path))
 				assert.same({
 					"---",
@@ -604,7 +635,7 @@ describe("notes.nvim", function()
 				local handled = notes.open_reference_note_for_key("doe2020")
 				assert.is_true(handled)
 
-				local note_path = tmp_dir .. "/doe2020.md"
+				local note_path = tmp_dir .. "/references/doe2020.md"
 				assert.equals(1, vim.fn.filereadable(note_path))
 				assert.same({
 					"---",
@@ -645,7 +676,7 @@ describe("notes.nvim", function()
 				local handled = notes.open_reference_note_for_key("grunwald2012safe")
 				assert.is_true(handled)
 
-				local note_path = tmp_dir .. "/grunwald2012safe.md"
+				local note_path = tmp_dir .. "/references/grunwald2012safe.md"
 				assert.equals(1, vim.fn.filereadable(note_path))
 				assert.same({
 					"---",
@@ -679,7 +710,8 @@ describe("notes.nvim", function()
 				},
 			},
 		}, function(tmp_dir)
-			local note_path = tmp_dir .. "/doe2020.md"
+			local note_path = tmp_dir .. "/references/doe2020.md"
+			vim.fn.mkdir(tmp_dir .. "/references", "p")
 			vim.fn.writefile({ "Existing content" }, note_path)
 
 			notes.setup({ bib_file = tmp_dir .. "/refs.bib" })

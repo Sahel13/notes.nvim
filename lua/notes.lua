@@ -167,12 +167,17 @@ local function follow_wikilink_with(cmd)
 
 	local cwd = vim.fn.getcwd()
 	local target = cwd .. "/" .. link_text .. ".md"
+	local references_target = fs.reference_dir(cwd) .. "/" .. link_text .. ".md"
 
 	if vim.fn.filereadable(target) == 0 then
-		local ok = pcall(vim.fn.writefile, { "# " .. link_text }, target)
-		if not ok then
-			vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
-			return false
+		if vim.fn.filereadable(references_target) == 1 then
+			target = references_target
+		else
+			local ok = pcall(vim.fn.writefile, { "# " .. link_text }, target)
+			if not ok then
+				vim.notify("notes.nvim: unable to create " .. target, vim.log.levels.ERROR)
+				return false
+			end
 		end
 	end
 
@@ -484,7 +489,16 @@ end
 
 local function open_reference_note_for_entry(citation_key, metadata)
 	local cwd = vim.fn.getcwd()
-	local target = cwd .. "/" .. citation_key .. ".md"
+	local references_dir = fs.reference_dir(cwd)
+	local target = references_dir .. "/" .. citation_key .. ".md"
+
+	if vim.fn.isdirectory(references_dir) == 0 then
+		local ok = pcall(vim.fn.mkdir, references_dir, "p")
+		if not ok or vim.fn.isdirectory(references_dir) == 0 then
+			vim.notify("notes.nvim: unable to create " .. references_dir, vim.log.levels.ERROR)
+			return false
+		end
+	end
 
 	if vim.fn.filereadable(target) == 0 then
 		local lines = reference_frontmatter_lines(citation_key, metadata)

@@ -33,6 +33,21 @@ describe("notes.fs", function()
 		end)
 	end)
 
+	it("includes reference notes from references subdirectory", function()
+		with_temp_dir({
+			{ name = "alpha.md", lines = { "# alpha" } },
+		}, function(tmp_dir)
+			vim.fn.mkdir(tmp_dir .. "/references", "p")
+			vim.fn.writefile({ "# ref" }, tmp_dir .. "/references/refnote.md")
+
+			local stems = fs.list_note_stems(tmp_dir)
+			table.sort(stems)
+			assert.equals(2, #stems)
+			assert.equals("alpha", stems[1])
+			assert.equals("refnote", stems[2])
+		end)
+	end)
+
 	it("excludes non-markdown files", function()
 		with_temp_dir({
 			{ name = "note.md", lines = { "# note" } },
